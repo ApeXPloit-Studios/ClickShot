@@ -4,8 +4,8 @@ local scene = require("scene")
 local main_menu = {}
 
 local buttons = {
-    { text = "Play",    x = 0, y = 0, w = 200, h = 50, hover = false, action = function() scene.set("game") end },
-    { text = "Exit",    x = 0, y = 0, w = 200, h = 50, hover = false, action = function() love.event.quit() end }
+    { text = "Play", x = 0, y = 0, w = 200, h = 50, action = function() scene.set("game") end },
+    { text = "Exit", x = 0, y = 0, w = 200, h = 50, action = function() love.event.quit() end }
 }
 
 function main_menu.load()
@@ -27,21 +27,13 @@ end
 function main_menu.draw()
     love.graphics.clear(0.2, 0.2, 0.2)
     love.graphics.setFont(assets.fonts.bold)
-
-    -- Title
     local title = "ClickShot"
     local tw = assets.fonts.bold:getWidth(title)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(title, (love.graphics.getWidth() - tw) / 2, 100)
 
-    -- Buttons
     for _, b in ipairs(buttons) do
-        if b.hover then
-            love.graphics.setColor(0.3, 0.3, 0.3) -- hover color
-        else
-            love.graphics.setColor(0.1, 0.1, 0.1)
-        end
-
+        love.graphics.setColor(b.hover and {0.3, 0.3, 0.3} or {0.1, 0.1, 0.1})
         love.graphics.rectangle("fill", b.x, b.y, b.w, b.h, 8, 8)
         love.graphics.setColor(1, 1, 1)
         local textW = assets.fonts.bold:getWidth(b.text)

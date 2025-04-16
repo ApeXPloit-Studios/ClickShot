@@ -78,8 +78,16 @@ function gun.draw()
 end
 
 function gun.isClicked(mx, my)
-    return mx >= x - gun_width * scale / 2 and mx <= x + gun_width * scale / 2 and
-           my >= y - gun_height * scale / 2 and my <= y + gun_height * scale / 2
+    -- Calculate actual displayed bounds based on scaled sprite
+    local scaled_width = gun_width * scale
+    local scaled_height = gun_height * scale
+    local left = x - scaled_width / 2
+    local right = x + scaled_width / 2
+    local top = y - scaled_height / 2
+    local bottom = y + scaled_height / 2
+
+    -- Check if mouse is within bounds
+    return mx >= left and mx <= right and my >= top and my <= bottom
 end
 
 function gun.shoot()
@@ -107,6 +115,28 @@ function gun.setSprite(newSprite)
     for i = 0, total_frames - 1 do
         table.insert(quads, love.graphics.newQuad(i * frame_width, 0, frame_width, frame_height, sprite:getDimensions()))
     end
+end
+
+function gun.getPosition()
+    return x
+end
+
+function gun.setPosition(newX)
+    x = newX
+end
+
+-- Debug function to visualize hitbox
+function gun.drawHitbox()
+    local scaled_width = gun_width * scale
+    local scaled_height = gun_height * scale
+    love.graphics.setColor(1, 0, 0, 0.5)
+    love.graphics.rectangle("line", 
+        x - scaled_width / 2,
+        y - scaled_height / 2,
+        scaled_width,
+        scaled_height
+    )
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 return gun
