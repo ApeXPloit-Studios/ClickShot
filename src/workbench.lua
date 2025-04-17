@@ -3,15 +3,11 @@ local gun = require("gun")
 local shop = require("shop") -- use same owned data
 local workbench = {}
 
-workbench.visible = false
 workbench.equipped = { muzzle = false, sight = false, laser = false }
 
-function workbench.toggle()
-    workbench.visible = not workbench.visible
-end
-
-function workbench.update(dt)
-    if not workbench.visible then return end
+function workbench.update(dt, game)
+    if not game.workbench_visible then return end
+    
     local mx, my = love.mouse.getPosition()
     for k, v in pairs(shop.cosmetics.pistol) do
         local b = v._bounds
@@ -21,8 +17,8 @@ function workbench.update(dt)
     end
 end
 
-function workbench.draw()
-    if not workbench.visible then return end
+function workbench.draw(game)
+    if not game.workbench_visible then return end
 
     local w, h = 400, 250
     local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
@@ -54,14 +50,17 @@ function workbench.draw()
     end
 end
 
-function workbench.mousepressed(mx, my, button)
-    if not workbench.visible or button ~= 1 then return end
-
+function workbench.mousepressed(x, y, button, game)
+    if not game.workbench_visible then return end
+    
     for k, v in pairs(shop.cosmetics.pistol) do
         local b = v._bounds
-        if v.owned and mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h then
-            workbench.equipped[k] = not workbench.equipped[k]
-            workbench.updateGunSprite()
+        if b and x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
+            if v.owned then
+                workbench.equipped[k] = not workbench.equipped[k]
+                workbench.updateGunSprite()
+            end
+            break
         end
     end
 end

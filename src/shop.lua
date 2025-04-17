@@ -15,8 +15,9 @@ function shop.toggle()
     shop.visible = not shop.visible
 end
 
-function shop.update(dt)
-    if not shop.visible then return end
+function shop.update(dt, game)
+    if not game.shop_visible then return end
+    
     local mx, my = love.mouse.getPosition()
     for _, cat in pairs(shop.cosmetics) do
         for _, v in pairs(cat) do
@@ -28,8 +29,8 @@ function shop.update(dt)
     end
 end
 
-function shop.draw()
-    if not shop.visible then return end
+function shop.draw(game)
+    if not game.shop_visible then return end
 
     local w, h = 400, 250
     local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
@@ -61,12 +62,12 @@ function shop.draw()
     end
 end
 
-function shop.mousepressed(mx, my, button, game)
-    if not shop.visible or button ~= 1 then return end
-
+function shop.mousepressed(x, y, button, game)
+    if not game.shop_visible then return end
+    
     for _, v in pairs(shop.cosmetics.pistol) do
         local b = v._bounds
-        if mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h then
+        if x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
             if not v.owned and game.shells >= v.cost then
                 game.shells = game.shells - v.cost
                 v.owned = true

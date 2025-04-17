@@ -6,10 +6,13 @@ local save = require("save")
 local upgrades = require("upgrades")
 local pause_menu = require("pause_menu")
 
-local game = {}
+local game = {
+    debug = false,
+    shop_visible = false,
+    workbench_visible = false
+}
 game.shells = 0
 game.auto_cps = 0
-game.debug = false  -- Debug mode flag
 
 function game.load()
     assets.load()
@@ -19,6 +22,16 @@ function game.load()
     local saved = save.load()
     game.shells = saved.shells
     shop.cosmetics = saved.cosmetics
+    
+    -- Load upgrades if they exist in save data
+    if saved.upgrades then
+        for i, upgrade in ipairs(upgrades.list) do
+            if saved.upgrades[i] then
+                upgrade.count = saved.upgrades[i].count
+                upgrade:effect(game)  -- Apply the upgrade effect
+            end
+        end
+    end
 end
 
 function game.update(dt)
@@ -28,8 +41,8 @@ function game.update(dt)
     end
 
     gun.update(dt)
-    shop.update(dt)
-    workbench.update(dt)
+    shop.update(dt, game)
+    workbench.update(dt, game)
     upgrades.update(dt, game)
 end
 
@@ -52,8 +65,8 @@ function game.draw()
     end
     gun.setPosition(oldX)
     
-    shop.draw()
-    workbench.draw()
+    shop.draw(game)
+    workbench.draw(game)
     pause_menu.draw()
     
     love.graphics.setScissor()
@@ -68,11 +81,11 @@ function game.mousepressed(x, y, button)
         return
     end
 
-    if shop.visible then
+    if game.shop_visible then
         shop.mousepressed(x, y, button, game)
         save.update(game.shells, shop.cosmetics)
-    elseif workbench.visible then
-        workbench.mousepressed(x, y, button)
+    elseif game.workbench_visible then
+        workbench.mousepressed(x, y, button, game)
         save.update(game.shells, shop.cosmetics)
     else
         -- Check upgrades panel clicks first
@@ -98,14 +111,28 @@ function game.keypressed(key)
         save.update(game.shells, shop.cosmetics)
     end
     if key == "s" then 
-        shop.toggle()
+        game.toggle_shop()
         save.update(game.shells, shop.cosmetics)
     end
     if key == "w" then 
-        workbench.toggle()
+        game.toggle_workbench()
         save.update(game.shells, shop.cosmetics)
     end
     if key == "f3" then game.debug = not game.debug end
+end
+
+function game.toggle_shop()
+    game.shop_visible = not game.shop_visible
+    if game.shop_visible then
+        game.workbench_visible = false
+    end
+end
+
+function game.toggle_workbench()
+    game.workbench_visible = not game.workbench_visible
+    if game.workbench_visible then
+        game.shop_visible = false
+    end
 end
 
 return game

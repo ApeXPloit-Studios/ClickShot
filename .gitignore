@@ -1,1 +1,6 @@
+# compilation files
+/build/
+/dist/
+
+# encryption keys
 keytoken.lua

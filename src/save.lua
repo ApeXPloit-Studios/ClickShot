@@ -1,22 +1,7 @@
-local keytoken = require("keytoken")
 local save = {}
 
 -- Save file path
 local SAVE_FILE = "arcshell_data.dat"
-
--- Simple XOR encryption/decryption using arithmetic
-local function xor(data, key)
-    local result = {}
-    for i = 1, #data do
-        local keyIndex = (i - 1) % #key + 1
-        local dataByte = string.byte(data, i)
-        local keyByte = string.byte(key, keyIndex)
-        -- Simple XOR using addition and subtraction
-        local xorByte = ((dataByte + keyByte) % 256)
-        result[i] = string.char(xorByte)
-    end
-    return table.concat(result)
-end
 
 -- Serialize a table to a string
 local function serialize(t)
@@ -68,7 +53,8 @@ function save.load()
                 sight = { owned = false, cost = 75 },
                 laser = { owned = false, cost = 100 }
             }
-        }
+        },
+        upgrades = {}  -- Initialize empty upgrades table
     }
 
     -- Debug: Print save directory
@@ -77,8 +63,7 @@ function save.load()
     if love.filesystem.getInfo(SAVE_FILE) then
         local content = love.filesystem.read(SAVE_FILE)
         if content then
-            local decrypted = xor(content, keytoken.encryption_key)
-            local success, loaded = pcall(deserialize, decrypted)
+            local success, loaded = pcall(deserialize, content)
             if success and loaded then
                 -- Ensure cost fields are preserved
                 for k, v in pairs(loaded.cosmetics.pistol) do
@@ -102,8 +87,7 @@ end
 -- Save game data
 function save.save(data)
     local serialized = serialize(data)
-    local encrypted = xor(serialized, keytoken.encryption_key)
-    local success = love.filesystem.write(SAVE_FILE, encrypted)
+    local success = love.filesystem.write(SAVE_FILE, serialized)
     if success then
         print("Successfully saved data")
     else
@@ -116,6 +100,16 @@ function save.update(shells, cosmetics)
     local data = save.load()
     data.shells = shells
     data.cosmetics = cosmetics
+    
+    -- Save upgrades data
+    local upgrades = require("upgrades")
+    data.upgrades = {}
+    for i, upgrade in ipairs(upgrades.list) do
+        data.upgrades[i] = {
+            count = upgrade.count
+        }
+    end
+    
     save.save(data)
 end
 
