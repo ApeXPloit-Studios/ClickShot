@@ -6,8 +6,12 @@ local main_menu = require("main_menu")
 local scene = require("scene")
 local pause_menu = require("pause_menu")
 local scale_manager = require("scale_manager")
+local ios_settings = require("ios_settings")
 
 function love.load()
+    -- Initialize iOS settings if needed
+    ios_settings.init()
+    
     -- Set default window mode with resizable flag
     love.window.setMode(800, 600, {
         resizable = true,
