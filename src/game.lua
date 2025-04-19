@@ -6,6 +6,7 @@ local save = require("save")
 local upgrades = require("upgrades")
 local pause_menu = require("pause_menu")
 local background = require("background")
+local game_background = require("game_background")
 
 local game = {
     debug = false,
@@ -19,6 +20,7 @@ function game.load()
     assets.load()
     gun.load()
     background.load()
+    game_background.load()
     
     -- Load saved data
     local saved = save.load()
@@ -47,6 +49,7 @@ function game.update(dt)
     workbench.update(dt, game)
     upgrades.update(dt, game)
     background.update(dt)
+    game_background.update(dt, game.shells)
 end
 
 function game.draw()
@@ -54,7 +57,8 @@ function game.draw()
     local gameWidth = love.graphics.getWidth() - 200  -- 200 is panel width
     love.graphics.setScissor(0, 0, gameWidth, love.graphics.getHeight())
     
-    -- Draw background
+    -- Draw backgrounds
+    game_background.draw()
     background.draw()
     
     love.graphics.setFont(assets.fonts.bold)
