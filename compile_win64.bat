@@ -8,6 +8,7 @@ set "LOVE_URL=https://github.com/love2d/love/releases/download/%LOVE_VERSION%/lo
 set "ROOT_DIR=%~dp0"
 set "BUILD_DIR=%ROOT_DIR%build"
 set "DIST_DIR=%ROOT_DIR%dist\Windows"
+set "LOVE_DIST_DIR=%ROOT_DIR%dist\Love2D"
 set "SRC_DIR=%ROOT_DIR%src"
 
 :: Check if source directory exists
@@ -82,6 +83,16 @@ echo Copying files to distribution directory...
 copy "%BUILD_DIR%\%GAME_NAME%.exe" "%DIST_DIR%\" /Y >nul
 if errorlevel 1 (
     echo Error: Failed to copy executable
+    pause
+    exit /b 1
+)
+
+:: Copy .love file to dist/Love2D
+echo Copying .love file to Love2D distribution directory...
+if not exist "%LOVE_DIST_DIR%" mkdir "%LOVE_DIST_DIR%" 2>nul
+copy "%BUILD_DIR%\%GAME_NAME%.love" "%LOVE_DIST_DIR%\" /Y >nul
+if errorlevel 1 (
+    echo Error: Failed to copy .love file
     pause
     exit /b 1
 )
