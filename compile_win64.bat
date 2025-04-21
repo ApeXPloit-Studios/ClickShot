@@ -8,7 +8,7 @@ set "LOVE_URL=https://github.com/love2d/love/releases/download/%LOVE_VERSION%/lo
 set "ROOT_DIR=%~dp0"
 set "BUILD_DIR=%ROOT_DIR%build"
 set "DIST_DIR=%ROOT_DIR%dist\Windows"
-set "LOVE_DIST_DIR=%ROOT_DIR%dist\Love2D"
+set "OTHER_DIR=%ROOT_DIR%dist\Other"
 set "SRC_DIR=%ROOT_DIR%src"
 
 :: Check if source directory exists
@@ -28,6 +28,7 @@ if exist "%BUILD_DIR%" (
 echo Creating directories...
 mkdir "%BUILD_DIR%" 2>nul
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%" 2>nul
+if not exist "%OTHER_DIR%" mkdir "%OTHER_DIR%" 2>nul
 
 :: Download LÖVE to build directory
 echo Downloading LÖVE...
@@ -47,76 +48,49 @@ if not exist "%BUILD_DIR%\love-%LOVE_VERSION%-win64\love.exe" (
     exit /b 1
 )
 
-:: Create temporary directory for game files
-echo Copying game files...
+:: Create regular Windows version
+echo Creating Windows version...
 mkdir "%BUILD_DIR%\game" 2>nul
 xcopy "%SRC_DIR%\*" "%BUILD_DIR%\game\" /E /Y /I >nul
-if errorlevel 1 (
-    echo Error: Failed to copy game files
-    pause
-    exit /b 1
-)
-
-:: Create .love file from the game directory
-echo Creating .love file...
 cd "%BUILD_DIR%\game"
 powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%GAME_NAME%.zip' -Force"
 cd "%ROOT_DIR%"
-if not exist "%BUILD_DIR%\%GAME_NAME%.zip" (
-    echo Error: Failed to create zip file
-    pause
-    exit /b 1
-)
 move "%BUILD_DIR%\%GAME_NAME%.zip" "%BUILD_DIR%\%GAME_NAME%.love" >nul
 
 :: Create executable
 echo Creating executable...
 copy /b "%BUILD_DIR%\love-%LOVE_VERSION%-win64\love.exe"+"%BUILD_DIR%\%GAME_NAME%.love" "%BUILD_DIR%\%GAME_NAME%.exe" >nul
-if not exist "%BUILD_DIR%\%GAME_NAME%.exe" (
-    echo Error: Failed to create executable
-    pause
-    exit /b 1
-)
 
-:: Copy final files to dist/Windows
-echo Copying files to distribution directory...
+:: Copy Windows files
+echo Copying files to Windows directory...
 copy "%BUILD_DIR%\%GAME_NAME%.exe" "%DIST_DIR%\" /Y >nul
-if errorlevel 1 (
-    echo Error: Failed to copy executable
-    pause
-    exit /b 1
-)
-
-:: Copy .love file to dist/Love2D
-echo Copying .love file to Love2D distribution directory...
-if not exist "%LOVE_DIST_DIR%" mkdir "%LOVE_DIST_DIR%" 2>nul
-copy "%BUILD_DIR%\%GAME_NAME%.love" "%LOVE_DIST_DIR%\" /Y >nul
-if errorlevel 1 (
-    echo Error: Failed to copy .love file
-    pause
-    exit /b 1
-)
-
-:: Copy required DLLs
-echo Copying DLLs...
 xcopy "%BUILD_DIR%\love-%LOVE_VERSION%-win64\*.dll" "%DIST_DIR%\" /Y >nul
-if errorlevel 1 (
-    echo Warning: Failed to copy some DLLs
-)
+
+:: Create R36S version
+echo Creating R36S version...
+mkdir "%BUILD_DIR%\game_r36s" 2>nul
+xcopy "%SRC_DIR%\*" "%BUILD_DIR%\game_r36s\" /E /Y /I >nul
+copy "%SRC_DIR%\platforms\gmr36s_conf.lua" "%BUILD_DIR%\game_r36s\conf.lua" /Y >nul
+copy "%SRC_DIR%\platforms\gmr36s_settings.lua" "%BUILD_DIR%\game_r36s\settings.lua" /Y >nul
+cd "%BUILD_DIR%\game_r36s"
+powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%GAME_NAME%_R36S.zip' -Force"
+cd "%ROOT_DIR%"
+move "%BUILD_DIR%\%GAME_NAME%_R36S.zip" "%OTHER_DIR%\R36S.love" >nul
 
 :: Copy license
 echo Copying license...
 copy "%ROOT_DIR%LICENSE.txt" "%DIST_DIR%\" /Y >nul 2>&1
-if errorlevel 1 (
-    echo Warning: License file not found
-)
 
 :: Clean up build directory
 echo Cleaning up...
 rd /s /q "%BUILD_DIR%" 2>nul
 
 echo.
-echo Success! Your game has been compiled to: "%DIST_DIR%"
+echo Success! Your game has been compiled to:
+echo - Windows version: "%DIST_DIR%"
+echo - R36S version: "%OTHER_DIR%\R36S.love"
 echo.
+echo Launching Windows version...
+start "" "%DIST_DIR%\%GAME_NAME%.exe"
 pause
 exit /b 0 

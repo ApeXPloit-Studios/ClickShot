@@ -4,7 +4,6 @@ local upgrades = {}
 upgrades.list = {
     {
         name = "Auto-Loader",
-        description = "Automatically loads shells every few seconds",
         base_cost = 15,
         count = 0,
         cps = 0.1, -- clicks per second
@@ -17,7 +16,6 @@ upgrades.list = {
     },
     {
         name = "Training Bot",
-        description = "A robot that helps with shooting",
         base_cost = 100,
         count = 0,
         cps = 1,
@@ -30,7 +28,6 @@ upgrades.list = {
     },
     {
         name = "Shell Factory",
-        description = "Produces shells automatically",
         base_cost = 1100,
         count = 0,
         cps = 8,
@@ -43,7 +40,6 @@ upgrades.list = {
     },
     {
         name = "Ammo Plant",
-        description = "Large-scale shell production facility",
         base_cost = 12000,
         count = 0,
         cps = 47,
@@ -89,9 +85,9 @@ function upgrades.draw()
     love.graphics.printf("Upgrades", x, y + 10, panelW, "center")
 
     -- Draw upgrades
-    local spacing = 80
+    local spacing = 90  -- Significantly increased spacing
     local startY = y + 50
-    local buttonH = 70
+    local buttonH = 80  -- Significantly increased height
 
     for i, upgrade in ipairs(upgrades.list) do
         local bx, by, bw, bh = x + 10, startY + (i-1) * spacing, panelW - 20, buttonH
@@ -101,16 +97,17 @@ function upgrades.draw()
         love.graphics.setColor(upgrade.hover and {0.3, 0.3, 0.3} or {0.2, 0.2, 0.2})
         love.graphics.rectangle("fill", bx, by, bw, bh, 6, 6)
 
-        -- Draw upgrade info
+        -- Draw upgrade name
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(assets.fonts.bold)
-        love.graphics.print(upgrade.name, bx + 10, by + 5)
-        love.graphics.print(upgrade.count, bx + bw - 30, by + 5)
+        love.graphics.print(upgrade.name, bx + 10, by + 15)
         
-        love.graphics.setFont(assets.fonts.regular)
-        love.graphics.print(upgrade.description, bx + 10, by + 25)
+        -- Draw count on the right side
+        local countStr = tostring(upgrade.count)
+        local countW = assets.fonts.bold:getWidth(countStr)
+        love.graphics.print(countStr, bx + bw - countW - 10, by + 15)
         
-        -- Draw cost
+        -- Draw cost on a new line
         love.graphics.setColor(1, 1, 0)
         love.graphics.print(upgrade:getNextCost() .. " shells", bx + 10, by + 45)
     end

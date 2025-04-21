@@ -12,11 +12,9 @@ function love.load()
     -- Initialize iOS settings if needed
     ios_settings.init()
     
-    -- Set default window mode with resizable flag
+    -- Set default window mode
     love.window.setMode(800, 600, {
-        resizable = true,
-        minwidth = 400,
-        minheight = 300
+        resizable = false
     })
     
     -- Initialize scale manager
