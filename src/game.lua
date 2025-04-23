@@ -11,7 +11,11 @@ local game_background = require("game_background")
 local game = {
     debug = false,
     shop_visible = false,
-    workbench_visible = false
+    workbench_visible = false,
+    gamepad = nil,
+    selected_button = 1,  -- 1 = gun, 2 = shop, 3 = workbench
+    button_cooldown = 0,
+    hover_effect = 0
 }
 game.shells = 0
 game.auto_cps = 0
@@ -36,12 +40,71 @@ function game.load()
             end
         end
     end
+
+    -- Initialize gamepad
+    local joysticks = love.joystick.getJoysticks()
+    if #joysticks > 0 then
+        game.gamepad = joysticks[1]
+    end
 end
 
 function game.update(dt)
     if pause_menu.visible then
         pause_menu.update(dt)
         return
+    end
+
+    -- Update button cooldown
+    if game.button_cooldown > 0 then
+        game.button_cooldown = game.button_cooldown - dt
+    end
+
+    -- Update hover effect
+    game.hover_effect = game.hover_effect + dt * 2
+    if game.hover_effect > math.pi * 2 then
+        game.hover_effect = 0
+    end
+
+    -- Check for gamepad input
+    if game.gamepad then
+        -- A button or right trigger to shoot
+        if game.gamepad:isGamepadDown("a") or game.gamepad:getAxis(5) > 0.5 then
+            local clicked = gun.shoot()
+            if clicked then
+                game.shells = game.shells + 1
+                save.update(game.shells, shop.cosmetics)
+            end
+        end
+
+        -- D-pad navigation
+        if game.button_cooldown <= 0 then
+            if game.gamepad:isGamepadDown("dpleft") then
+                game.selected_button = game.selected_button - 1
+                if game.selected_button < 1 then game.selected_button = 3 end
+                game.button_cooldown = 0.2
+            elseif game.gamepad:isGamepadDown("dpright") then
+                game.selected_button = game.selected_button + 1
+                if game.selected_button > 3 then game.selected_button = 1 end
+                game.button_cooldown = 0.2
+            end
+        end
+
+        -- Start button to toggle pause menu
+        if game.gamepad:isGamepadDown("start") then
+            pause_menu.toggle()
+            save.update(game.shells, shop.cosmetics)
+        end
+
+        -- A button to select current option
+        if game.gamepad:isGamepadDown("a") then
+            if game.selected_button == 2 then
+                game.toggle_shop()
+                save.update(game.shells, shop.cosmetics)
+            elseif game.selected_button == 3 then
+                game.toggle_workbench()
+                save.update(game.shells, shop.cosmetics)
+            end
+        end
     end
 
     gun.update(dt)
@@ -73,6 +136,37 @@ function game.draw()
         gun.drawHitbox()
     end
     gun.setPosition(oldX)
+    
+    -- Draw menu buttons with selection indicator
+    local buttonSpacing = 100
+    local buttonY = love.graphics.getHeight() - 50
+    local buttonX = (gameWidth - (buttonSpacing * 2)) / 2
+
+    -- Draw shop button
+    local shopHover = game.selected_button == 2
+    local shopScale = 1 + (shopHover and math.sin(game.hover_effect) * 0.1 or 0)
+    love.graphics.push()
+    love.graphics.translate(buttonX + buttonSpacing/2, buttonY + 20)
+    love.graphics.scale(shopScale, shopScale)
+    love.graphics.translate(-buttonSpacing/2, -20)
+    love.graphics.setColor(shopHover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
+    love.graphics.rectangle("fill", 0, 0, buttonSpacing, 40, 6, 6)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("Shop", 0, 10, buttonSpacing, "center")
+    love.graphics.pop()
+
+    -- Draw workbench button
+    local workbenchHover = game.selected_button == 3
+    local workbenchScale = 1 + (workbenchHover and math.sin(game.hover_effect) * 0.1 or 0)
+    love.graphics.push()
+    love.graphics.translate(buttonX + buttonSpacing + buttonSpacing/2, buttonY + 20)
+    love.graphics.scale(workbenchScale, workbenchScale)
+    love.graphics.translate(-buttonSpacing/2, -20)
+    love.graphics.setColor(workbenchHover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
+    love.graphics.rectangle("fill", 0, 0, buttonSpacing, 40, 6, 6)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("Workbench", 0, 10, buttonSpacing, "center")
+    love.graphics.pop()
     
     shop.draw(game)
     workbench.draw(game)

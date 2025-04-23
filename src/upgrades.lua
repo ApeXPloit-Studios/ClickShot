@@ -52,7 +52,30 @@ upgrades.list = {
     }
 }
 
+-- Navigation state
+upgrades.selected_index = 1
+upgrades.navigation_cooldown = 0
+upgrades.navigation_cooldown_time = 0.2  -- Time between navigation inputs
+
+function upgrades.navigate(direction)
+    if upgrades.navigation_cooldown > 0 then return end
+    
+    upgrades.selected_index = upgrades.selected_index + direction
+    if upgrades.selected_index < 1 then
+        upgrades.selected_index = #upgrades.list
+    elseif upgrades.selected_index > #upgrades.list then
+        upgrades.selected_index = 1
+    end
+    
+    upgrades.navigation_cooldown = upgrades.navigation_cooldown_time
+end
+
 function upgrades.update(dt, game)
+    -- Update navigation cooldown
+    if upgrades.navigation_cooldown > 0 then
+        upgrades.navigation_cooldown = upgrades.navigation_cooldown - dt
+    end
+    
     -- Update hover states
     local mx, my = love.mouse.getPosition()
     for _, upgrade in ipairs(upgrades.list) do
@@ -94,7 +117,8 @@ function upgrades.draw()
         upgrade._bounds = { x = bx, y = by, w = bw, h = bh }
 
         -- Draw upgrade background
-        love.graphics.setColor(upgrade.hover and {0.3, 0.3, 0.3} or {0.2, 0.2, 0.2})
+        local isSelected = i == upgrades.selected_index
+        love.graphics.setColor(isSelected and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
         love.graphics.rectangle("fill", bx, by, bw, bh, 6, 6)
 
         -- Draw upgrade name
@@ -116,7 +140,7 @@ end
 function upgrades.mousepressed(x, y, button, game)
     if button ~= 1 then return end
 
-    for _, upgrade in ipairs(upgrades.list) do
+    for i, upgrade in ipairs(upgrades.list) do
         local b = upgrade._bounds
         if b and x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
             local cost = upgrade:getNextCost()
