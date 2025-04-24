@@ -6,7 +6,11 @@ local settings = require("settings")
 local main_menu = {
     time = 0,
     title_scale = 1,
-    title_rotation = 0
+    title_rotation = 0,
+    selected_button = 1,
+    button_cooldown = 0,
+    hover_effect = 0,
+    gamepad = nil
 }
 
 local buttons = {
@@ -29,6 +33,12 @@ function main_menu.load()
         b.x = (screenW - b.w) / 2
         b.y = (screenH / 2 - (#buttons * (b.h + spacing)) / 2) + ((i - 1) * (b.h + spacing))
     end
+
+    -- Initialize gamepad
+    local joysticks = love.joystick.getJoysticks()
+    if #joysticks > 0 then
+        main_menu.gamepad = joysticks[1]
+    end
 end
 
 function main_menu.update(dt)
@@ -38,6 +48,17 @@ function main_menu.update(dt)
     main_menu.title_scale = 1 + 0.1 * math.sin(main_menu.time * 2)
     main_menu.title_rotation = 0.05 * math.sin(main_menu.time)
     
+    -- Update hover effect
+    main_menu.hover_effect = main_menu.hover_effect + dt * 2
+    if main_menu.hover_effect > math.pi * 2 then
+        main_menu.hover_effect = 0
+    end
+    
+    -- Update button cooldown
+    if main_menu.button_cooldown > 0 then
+        main_menu.button_cooldown = main_menu.button_cooldown - dt
+    end
+    
     -- Update background effect
     background_effect.update(dt)
     
@@ -46,8 +67,44 @@ function main_menu.update(dt)
     
     -- Update button hover states
     local mx, my = love.mouse.getPosition()
-    for _, b in ipairs(buttons) do
+    for i, b in ipairs(buttons) do
         b.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
+    end
+
+    -- Handle gamepad input
+    if main_menu.gamepad then
+        -- If settings is open, let it handle controller input
+        if settings.visible then
+            return
+        end
+
+        -- D-pad navigation
+        if main_menu.button_cooldown <= 0 then
+            if main_menu.gamepad:isGamepadDown("dpup") then
+                main_menu.selected_button = main_menu.selected_button - 1
+                if main_menu.selected_button < 1 then main_menu.selected_button = #buttons end
+                main_menu.button_cooldown = 0.2
+            elseif main_menu.gamepad:isGamepadDown("dpdown") then
+                main_menu.selected_button = main_menu.selected_button + 1
+                if main_menu.selected_button > #buttons then main_menu.selected_button = 1 end
+                main_menu.button_cooldown = 0.2
+            end
+        end
+
+        -- A button to select
+        if main_menu.gamepad:isGamepadDown("a") then
+            buttons[main_menu.selected_button].action()
+        end
+
+        -- Start button to start game
+        if main_menu.gamepad:isGamepadDown("start") then
+            scene.set("game")
+        end
+
+        -- B button to close settings if open
+        if main_menu.gamepad:isGamepadDown("b") and settings.visible then
+            settings.toggle()
+        end
     end
 end
 
@@ -85,10 +142,11 @@ function main_menu.draw()
     love.graphics.pop()
     
     -- Draw buttons with enhanced hover effects
-    for _, b in ipairs(buttons) do
+    for i, b in ipairs(buttons) do
         -- Button background with hover effect
-        local hover_scale = b.hover and 1.1 or 1
-        local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
+        local isSelected = i == main_menu.selected_button
+        local hover_scale = 1 + (isSelected and math.sin(main_menu.hover_effect) * 0.1 or 0)
+        local hover_color = isSelected and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
         
         love.graphics.push()
         love.graphics.translate(b.x + b.w/2, b.y + b.h/2)

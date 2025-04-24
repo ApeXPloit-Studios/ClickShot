@@ -3,7 +3,7 @@ function love.conf(t)
     t.window.width = 1280
     t.window.height = 720
     t.window.resizable = false
-    t.window.minwidth = 854
-    t.window.minheight = 480
+    t.window.minwidth = 1280
+    t.window.minheight = 720
     t.window.vsync = true
 end
