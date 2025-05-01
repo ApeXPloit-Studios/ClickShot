@@ -12,7 +12,7 @@ local timer = 0
 local gun_width, gun_height
 
 -- Scale
-local scale = 2.5
+local scale = 4.0  -- Increased from 2.5 to 4.0 for larger gun
 
 -- Click timing
 local click_times = {}
@@ -22,10 +22,10 @@ local animating = false
 
 -- Hitbox adjustment (percentage of sprite size)
 local hitbox = {
-    width_percent = 0.8,  -- Increased from 0.6 to 0.8 for better clickability
-    height_percent = 0.9,  -- Increased from 0.8 to 0.9 for better clickability
+    width_percent = 0.9,  -- Increased from 0.8 to 0.9 for better clickability
+    height_percent = 0.95,  -- Increased from 0.9 to 0.95 for better clickability
     x_offset_percent = 0,  -- Center horizontally
-    y_offset_percent = 0   -- Removed vertical offset for more intuitive clicking
+    y_offset_percent = 0   -- Center vertically
 }
 
 function gun.load()
@@ -58,8 +58,9 @@ function gun.update(dt)
         return
     end
 
-    local min_frame_time = 1 / 24
-    local max_frame_time = 1 / 6
+    -- Faster animation based on click speed
+    local min_frame_time = 1 / 30  -- Increased from 24 to 30 for smoother animation
+    local max_frame_time = 1 / 8   -- Increased from 6 to 8 for better timing
     local frame_duration = max_frame_time - ((max_frame_time - min_frame_time) * (cps / 2))
 
     if animating then
@@ -75,6 +76,19 @@ function gun.update(dt)
 end
 
 function gun.draw()
+    -- Draw hitbox for debugging
+    if love.keyboard.isDown('f3') then
+        local hitbox_width = gun_width * scale * hitbox.width_percent
+        local hitbox_height = gun_height * scale * hitbox.height_percent
+        local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
+        local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
+        
+        love.graphics.setColor(1, 0, 0, 0.5)
+        love.graphics.rectangle("fill", hitbox_x, hitbox_y, hitbox_width, hitbox_height)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+
+    -- Draw gun sprite
     love.graphics.draw(
         sprite,
         quads[frame],
@@ -86,15 +100,11 @@ function gun.draw()
 end
 
 function gun.isClicked(mx, my)
-    -- Get current window dimensions
-    local gameWidth = love.graphics.getWidth()
-    
     -- Calculate actual hitbox dimensions
     local hitbox_width = gun_width * scale * hitbox.width_percent
     local hitbox_height = gun_height * scale * hitbox.height_percent
     
     -- Calculate hitbox position with offset
-    -- Note: x is now centered in the game area (gameWidth/2)
     local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
     local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
 
@@ -142,32 +152,6 @@ end
 
 function gun.setPosition(newX)
     x = newX
-end
-
--- Debug function to visualize hitbox
-function gun.drawHitbox()
-    -- Calculate hitbox dimensions
-    local hitbox_width = gun_width * scale * hitbox.width_percent
-    local hitbox_height = gun_height * scale * hitbox.height_percent
-    
-    -- Calculate hitbox position with offset
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
-
-    -- Draw the hitbox
-    love.graphics.setColor(1, 0, 0, 0.5)
-    love.graphics.rectangle("fill", 
-        hitbox_x,
-        hitbox_y,
-        hitbox_width,
-        hitbox_height
-    )
-    
-    -- Draw the center point
-    love.graphics.setColor(0, 1, 0, 1)
-    love.graphics.circle("fill", x, y, 3)
-    
-    love.graphics.setColor(1, 1, 1, 1)
 end
 
 return gun
