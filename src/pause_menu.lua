@@ -1,6 +1,5 @@
 local assets = require("assets")
 local scene = require("scene")
-local settings = require("settings")
 local save = require("save")
 local shop = require("shop")
 local background_effect = require("background_effect")
@@ -12,9 +11,8 @@ local pause_menu = {
 }
 
 local buttons = {
-    { text = "Resume", action = function() pause_menu.visible = false end },
-    { text = "Settings", action = function() settings.toggle() end },
-    { text = "Main Menu", action = function() 
+    { text = "Resume", hover = false, action = function() pause_menu.visible = false end },
+    { text = "Main Menu", hover = false, action = function() 
         pause_menu.visible = false
         save.update(require("game").shells, shop.cosmetics)
         scene.set("menu")
@@ -23,7 +21,7 @@ local buttons = {
 
 -- Only add exit button if not on iOS
 if love.system.getOS() ~= "iOS" then
-    table.insert(buttons, { text = "Exit", action = function() 
+    table.insert(buttons, { text = "Exit", hover = false, action = function() 
         save.update(require("game").shells, shop.cosmetics)
         love.event.quit() 
     end })
@@ -31,9 +29,6 @@ end
 
 function pause_menu.toggle()
     pause_menu.visible = not pause_menu.visible
-    if not pause_menu.visible then
-        settings.visible = false
-    end
 end
 
 function pause_menu.update(dt)
@@ -45,15 +40,18 @@ function pause_menu.update(dt)
     -- Update background effect
     background_effect.update(dt)
     
+    -- Update button hover states
     local mx, my = love.mouse.getPosition()
     for _, b in ipairs(buttons) do
-        local b = b._bounds
-        if b then
-            b.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
+        local was_hover = b.hover
+        b.hover = mx >= b._bounds.x and mx <= b._bounds.x + b._bounds.w and 
+                 my >= b._bounds.y and my <= b._bounds.y + b._bounds.h
+        
+        -- Could add hover sound here if we want
+        if b.hover and not was_hover then
+            -- love.audio.play(assets.sounds.hover)
         end
     end
-    
-    settings.update(dt)
 end
 
 function pause_menu.draw()
@@ -99,25 +97,28 @@ function pause_menu.draw()
     local startY = y + 50
     local buttonH = 50
 
-    -- Adjust button sizes for touch on iOS
-    if love.system.getOS() == "iOS" then
-        buttonH = 70
-        spacing = 80
-    end
-
     for i, b in ipairs(buttons) do
         local by = startY + (i-1) * spacing
         local bx, bw = x + 50, w - 100
         b._bounds = { x = bx, y = by, w = bw, h = buttonH }
 
         -- Button background with hover effect
-        local hover_scale = b._bounds.hover and 1.1 or 1
-        local hover_color = b._bounds.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
+        local hover_scale = b.hover and 1.1 or 1
+        local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
         
         love.graphics.push()
         love.graphics.translate(bx + bw/2, by + buttonH/2)
         love.graphics.scale(hover_scale, hover_scale)
         love.graphics.translate(-bw/2, -buttonH/2)
+        
+        -- Draw button glow when hovered
+        if b.hover then
+            for i = 1, 3 do
+                local glow_alpha = 0.1 - (i * 0.03)
+                love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
+                love.graphics.rectangle("fill", -i*2, -i*2, bw + i*4, buttonH + i*4, 10 + i, 10 + i)
+            end
+        end
         
         -- Draw button background with rounded corners
         love.graphics.setColor(hover_color[1], hover_color[2], hover_color[3])
@@ -127,30 +128,29 @@ function pause_menu.draw()
         love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.rectangle("line", 0, 0, bw, buttonH, 10, 10)
         
+        -- Draw button text with shadow when hovered
+        if b.hover then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.print(b.text, (bw - assets.fonts.bold:getWidth(b.text)) / 2 + 2, 
+                              (buttonH - assets.fonts.bold:getHeight()) / 2 + 2)
+        end
+        
         -- Draw button text
         love.graphics.setColor(1, 1, 1)
-        local textW = assets.fonts.bold:getWidth(b.text)
-        local textH = assets.fonts.bold:getHeight()
-        love.graphics.print(b.text, (bw - textW) / 2, (buttonH - textH) / 2)
+        love.graphics.print(b.text, (bw - assets.fonts.bold:getWidth(b.text)) / 2, 
+                          (buttonH - assets.fonts.bold:getHeight()) / 2)
         
         love.graphics.pop()
     end
-
-    -- Draw settings if visible
-    settings.draw()
 end
 
 function pause_menu.mousepressed(mx, my, button)
     if not pause_menu.visible or button ~= 1 then return end
 
-    if settings.visible then
-        settings.mousepressed(mx, my, button)
-        return
-    end
-
     for _, b in ipairs(buttons) do
-        local bounds = b._bounds
-        if mx >= bounds.x and mx <= bounds.x + bounds.w and my >= bounds.y and my <= bounds.y + bounds.h then
+        if b.hover then
+            -- Play click sound
+            love.audio.play(assets.sounds.click)
             b.action()
             return
         end

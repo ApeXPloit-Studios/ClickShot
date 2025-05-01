@@ -1,43 +1,32 @@
 local assets = require("assets")
 local scene = require("scene")
 local background_effect = require("background_effect")
-local settings = require("settings")
 
 local main_menu = {
     time = 0,
     title_scale = 1,
     title_rotation = 0,
-    selected_button = 1,
-    button_cooldown = 0,
     hover_effect = 0,
-    gamepad = nil
+    button_sound_played = false
 }
 
 local buttons = {
-    { text = "Play", x = 0, y = 0, w = 200, h = 50, action = function() scene.set("game") end },
-    { text = "Settings", x = 0, y = 0, w = 200, h = 50, action = function() settings.toggle() end }
+    { text = "Play", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() scene.set("game") end }
 }
 
 -- Only add exit button if not on iOS
 if love.system.getOS() ~= "iOS" then
-    table.insert(buttons, { text = "Exit", x = 0, y = 0, w = 200, h = 50, action = function() love.event.quit() end })
+    table.insert(buttons, { text = "Exit", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() love.event.quit() end })
 end
 
 function main_menu.load()
     background_effect.load()
-    settings.load()
     
     local screenW, screenH = love.graphics.getDimensions()
     local spacing = 20
     for i, b in ipairs(buttons) do
         b.x = (screenW - b.w) / 2
         b.y = (screenH / 2 - (#buttons * (b.h + spacing)) / 2) + ((i - 1) * (b.h + spacing))
-    end
-
-    -- Initialize gamepad
-    local joysticks = love.joystick.getJoysticks()
-    if #joysticks > 0 then
-        main_menu.gamepad = joysticks[1]
     end
 end
 
@@ -54,57 +43,24 @@ function main_menu.update(dt)
         main_menu.hover_effect = 0
     end
     
-    -- Update button cooldown
-    if main_menu.button_cooldown > 0 then
-        main_menu.button_cooldown = main_menu.button_cooldown - dt
-    end
-    
-    -- Update background effect
-    background_effect.update(dt)
-    
-    -- Update settings
-    settings.update(dt)
-    
     -- Update button hover states
     local mx, my = love.mouse.getPosition()
-    for i, b in ipairs(buttons) do
+    local hover_found = false
+    for _, b in ipairs(buttons) do
+        local was_hover = b.hover
         b.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
+        
+        -- Play hover sound when first hovering
+        if b.hover and not was_hover then
+            -- Play hover sound if we add one
+            -- love.audio.play(assets.sounds.hover)
+            hover_found = true
+        end
     end
-
-    -- Handle gamepad input
-    if main_menu.gamepad then
-        -- If settings is open, let it handle controller input
-        if settings.visible then
-            return
-        end
-
-        -- D-pad navigation
-        if main_menu.button_cooldown <= 0 then
-            if main_menu.gamepad:isGamepadDown("dpup") then
-                main_menu.selected_button = main_menu.selected_button - 1
-                if main_menu.selected_button < 1 then main_menu.selected_button = #buttons end
-                main_menu.button_cooldown = 0.2
-            elseif main_menu.gamepad:isGamepadDown("dpdown") then
-                main_menu.selected_button = main_menu.selected_button + 1
-                if main_menu.selected_button > #buttons then main_menu.selected_button = 1 end
-                main_menu.button_cooldown = 0.2
-            end
-        end
-
-        -- A button to select
-        if main_menu.gamepad:isGamepadDown("a") then
-            buttons[main_menu.selected_button].action()
-        end
-
-        -- Start button to start game
-        if main_menu.gamepad:isGamepadDown("start") then
-            scene.set("game")
-        end
-
-        -- B button to close settings if open
-        if main_menu.gamepad:isGamepadDown("b") and settings.visible then
-            settings.toggle()
-        end
+    
+    -- Reset button sound flag when no buttons are hovered
+    if not hover_found then
+        main_menu.button_sound_played = false
     end
 end
 
@@ -142,18 +98,27 @@ function main_menu.draw()
     love.graphics.pop()
     
     -- Draw buttons with enhanced hover effects
-    for i, b in ipairs(buttons) do
+    for _, b in ipairs(buttons) do
         -- Button background with hover effect
-        local isSelected = i == main_menu.selected_button
-        local hover_scale = 1 + (isSelected and math.sin(main_menu.hover_effect) * 0.1 or 0)
-        local hover_color = isSelected and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
+        local hover_scale = 1 + (b.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
+        local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
         
         love.graphics.push()
         love.graphics.translate(b.x + b.w/2, b.y + b.h/2)
         love.graphics.scale(hover_scale, hover_scale)
         love.graphics.translate(-b.w/2, -b.h/2)
         
-        -- Draw button background with rounded corners
+        -- Draw button background with rounded corners and glow
+        if b.hover then
+            -- Draw glow
+            for i = 1, 3 do
+                local glow_alpha = 0.1 - (i * 0.03)
+                love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
+                love.graphics.rectangle("fill", -i*2, -i*2, b.w + i*4, b.h + i*4, 10 + i, 10 + i)
+            end
+        end
+        
+        -- Draw button background
         love.graphics.setColor(hover_color[1], hover_color[2], hover_color[3])
         love.graphics.rectangle("fill", 0, 0, b.w, b.h, 10, 10)
         
@@ -161,30 +126,27 @@ function main_menu.draw()
         love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.rectangle("line", 0, 0, b.w, b.h, 10, 10)
         
-        -- Draw button text
+        -- Draw button text with shadow
+        if b.hover then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.print(b.text, (b.w - assets.fonts.bold:getWidth(b.text)) / 2 + 2, 
+                              (b.h - assets.fonts.bold:getHeight()) / 2 + 2)
+        end
+        
         love.graphics.setColor(1, 1, 1)
-        local textW = assets.fonts.bold:getWidth(b.text)
-        local textH = assets.fonts.bold:getHeight()
-        love.graphics.print(b.text, (b.w - textW) / 2, (b.h - textH) / 2)
+        love.graphics.print(b.text, (b.w - assets.fonts.bold:getWidth(b.text)) / 2, 
+                          (b.h - assets.fonts.bold:getHeight()) / 2)
         
         love.graphics.pop()
     end
-    
-    -- Draw settings if visible
-    settings.draw()
 end
 
 function main_menu.mousepressed(x, y, button)
     if button == 1 then
-        -- Check settings first
-        if settings.visible then
-            settings.mousepressed(x, y, button)
-            return
-        end
-        
-        -- Then check menu buttons
         for _, b in ipairs(buttons) do
             if b.hover then
+                -- Play click sound
+                love.audio.play(assets.sounds.click)
                 b.action()
                 return
             end

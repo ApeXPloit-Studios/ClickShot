@@ -6,19 +6,15 @@ local main_menu = require("main_menu")
 local scene = require("scene")
 local pause_menu = require("pause_menu")
 local scale_manager = require("scale_manager")
-local ios_settings = require("ios_settings")
 
 function love.load()
-    -- Initialize iOS settings if needed
-    ios_settings.init()
-    
-    -- Set default window mode
-    love.window.setMode(800, 600, {
-        resizable = false
+    -- Set window mode to 720p
+    love.window.setMode(1280, 720, {
+        resizable = false,
+        vsync = true,
+        minwidth = 1280,
+        minheight = 720
     })
-    
-    -- Initialize scale manager
-    scale_manager.update()
     
     scene.current = "menu"
     main_menu.load()
@@ -34,25 +30,18 @@ function love.update(dt)
 end
 
 function love.draw()
-    scale_manager.start()
-    
     if scene.current == "game" then
         game.draw()
     elseif scene.current == "menu" then
         main_menu.draw()
     end
-    
-    scale_manager.finish()
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-    -- Convert screen coordinates to game coordinates
-    local game_x, game_y = scale_manager.toGameCoords(x, y)
-    
     if scene.current == "game" then
-        game.mousepressed(game_x, game_y, button)
+        game.mousepressed(x, y, button)
     elseif scene.current == "menu" then
-        main_menu.mousepressed(game_x, game_y, button)
+        main_menu.mousepressed(x, y, button)
     end
 end
 

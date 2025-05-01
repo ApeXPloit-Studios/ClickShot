@@ -20,6 +20,14 @@ local click_cooldown = 0.5
 local last_click_time = 0
 local animating = false
 
+-- Hitbox adjustment (percentage of sprite size)
+local hitbox = {
+    width_percent = 0.8,  -- Increased from 0.6 to 0.8 for better clickability
+    height_percent = 0.9,  -- Increased from 0.8 to 0.9 for better clickability
+    x_offset_percent = 0,  -- Center horizontally
+    y_offset_percent = 0   -- Removed vertical offset for more intuitive clicking
+}
+
 function gun.load()
     sprite = assets.images.gun
 
@@ -78,16 +86,27 @@ function gun.draw()
 end
 
 function gun.isClicked(mx, my)
-    -- Calculate actual displayed bounds based on scaled sprite
-    local scaled_width = gun_width * scale
-    local scaled_height = gun_height * scale
-    local left = x - scaled_width / 2
-    local right = x + scaled_width / 2
-    local top = y - scaled_height / 2
-    local bottom = y + scaled_height / 2
+    -- Get current window dimensions
+    local gameWidth = love.graphics.getWidth()
+    
+    -- Calculate actual hitbox dimensions
+    local hitbox_width = gun_width * scale * hitbox.width_percent
+    local hitbox_height = gun_height * scale * hitbox.height_percent
+    
+    -- Calculate hitbox position with offset
+    -- Note: x is now centered in the game area (gameWidth/2)
+    local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
+    local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
 
-    -- Check if mouse is within bounds
-    return mx >= left and mx <= right and my >= top and my <= bottom
+    -- Debug print for troubleshooting
+    if love.keyboard.isDown('f3') then
+        print(string.format("Mouse: (%d, %d), Hitbox: (%d, %d, %d, %d)", 
+            mx, my, hitbox_x, hitbox_y, hitbox_width, hitbox_height))
+    end
+
+    -- Check if mouse is within hitbox bounds
+    return mx >= hitbox_x and mx <= hitbox_x + hitbox_width and 
+           my >= hitbox_y and my <= hitbox_y + hitbox_height
 end
 
 function gun.shoot()
@@ -127,15 +146,27 @@ end
 
 -- Debug function to visualize hitbox
 function gun.drawHitbox()
-    local scaled_width = gun_width * scale
-    local scaled_height = gun_height * scale
+    -- Calculate hitbox dimensions
+    local hitbox_width = gun_width * scale * hitbox.width_percent
+    local hitbox_height = gun_height * scale * hitbox.height_percent
+    
+    -- Calculate hitbox position with offset
+    local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
+    local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
+
+    -- Draw the hitbox
     love.graphics.setColor(1, 0, 0, 0.5)
-    love.graphics.rectangle("line", 
-        x - scaled_width / 2,
-        y - scaled_height / 2,
-        scaled_width,
-        scaled_height
+    love.graphics.rectangle("fill", 
+        hitbox_x,
+        hitbox_y,
+        hitbox_width,
+        hitbox_height
     )
+    
+    -- Draw the center point
+    love.graphics.setColor(0, 1, 0, 1)
+    love.graphics.circle("fill", x, y, 3)
+    
     love.graphics.setColor(1, 1, 1, 1)
 end
 
