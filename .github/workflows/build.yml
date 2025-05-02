@@ -2,19 +2,15 @@ name: Build ClickShot
 
 on:
   push:
-    branches: [ main ]  # Or your actual main branch
+    branches: [ main ]
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Run Windows Compile Script
-        run: ./compile_win64.bat
-
-      - name: Upload Windows Build Artifacts
-        uses: actions/upload-artifact@v4
+      - run: ./compile_win64.bat
+      - uses: actions/upload-artifact@v4
         with:
           name: clickshot-windows
           path: dist/Windows/
@@ -23,21 +19,29 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Make macOS Script Executable
-        run: chmod +x ./compile_macos.sh
-
-      - name: Run macOS Compile Script
-        run: ./compile_macos.sh
-
-      - name: Upload macOS Build Artifacts
-        uses: actions/upload-artifact@v4
+      - run: chmod +x ./compile_macos.sh
+      - run: ./compile_macos.sh
+      - uses: actions/upload-artifact@v4
         with:
           name: clickshot-macos
           path: dist/macOS/
-
-      - name: Upload iOS Build Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: clickshot-ios
           path: dist/iOS/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: chmod +x ./compile_linux.sh
+      - run: |
+          sudo apt update
+          sudo apt install -y libfuse2
+          wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O appimagetool.AppImage
+          chmod +x appimagetool.AppImage
+          ./compile_linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-linux
+          path: dist/Linux/
