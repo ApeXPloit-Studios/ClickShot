@@ -1,0 +1,43 @@
+name: Build ClickShot
+
+on:
+  push:
+    branches: [ main ]  # Or your actual main branch
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Windows Compile Script
+        run: ./compile_win64.bat
+
+      - name: Upload Windows Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-windows
+          path: dist/Windows/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Make macOS Script Executable
+        run: chmod +x ./compile_macos.sh
+
+      - name: Run macOS Compile Script
+        run: ./compile_macos.sh
+
+      - name: Upload macOS Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-macos
+          path: dist/macOS/
+
+      - name: Upload iOS Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-ios
+          path: dist/iOS/
