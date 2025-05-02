@@ -16,6 +16,7 @@ function love.load()
         minheight = 720
     })
     
+    scene.load()  -- Initialize scene (including menu music)
     scene.current = "menu"
     main_menu.load()
     game.load()
