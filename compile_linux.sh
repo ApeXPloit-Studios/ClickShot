@@ -37,14 +37,18 @@ mv squashfs-root "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
 cp "$BUILD_DIR/$GAME_NAME.love" "$APPDIR/usr/bin/"
 
-# Rename love binary to game name
-if [ -f "$APPDIR/usr/bin/love" ]; then
-  mv "$APPDIR/usr/bin/love" "$APPDIR/usr/bin/$GAME_NAME"
-  chmod +x "$APPDIR/usr/bin/$GAME_NAME"
-else
-  echo "❌ Error: 'love' binary not found in extracted AppImage."
+# Dynamically find the 'love' binary
+echo "[3b] Searching for love binary..."
+LOVE_BIN_PATH=$(find "$APPDIR" -type f -name "love" -perm -u=x | head -n 1)
+
+if [ -z "$LOVE_BIN_PATH" ]; then
+  echo "❌ Error: 'love' binary not found in AppImage."
   exit 1
 fi
+
+echo "✅ Found love binary at: $LOVE_BIN_PATH"
+cp "$LOVE_BIN_PATH" "$APPDIR/usr/bin/$GAME_NAME"
+chmod +x "$APPDIR/usr/bin/$GAME_NAME"
 
 # Add AppRun
 echo -e "#!/bin/bash\nexec \"\${APPDIR}/usr/bin/$GAME_NAME\" \"\${APPDIR}/usr/bin/$GAME_NAME.love\"" > "$APPDIR/AppRun"
@@ -69,7 +73,7 @@ if [ ! -f "$APPIMAGE_TOOL" ]; then
 fi
 
 # Package AppImage
-echo "Packaging AppImage..."
+echo "📦 Packaging AppImage..."
 "$APPIMAGE_TOOL" "$APPDIR" "$DIST_DIR/$GAME_NAME.AppImage"
 
 echo "✅ Done: AppImage saved to $DIST_DIR/$GAME_NAME.AppImage"
