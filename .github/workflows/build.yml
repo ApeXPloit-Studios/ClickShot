@@ -2,18 +2,28 @@ name: Build ClickShot
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # or your default branch
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-      - run: ./compile_win64.bat
-      - uses: actions/upload-artifact@v4
+
+      - name: Run Windows Compile Script
+        run: ./compile_win64.bat
+
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v4
         with:
           name: clickshot-windows
           path: dist/Windows/
+
+      - name: Upload Love2D .love File
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D/ClickShot.love
 
   build-macos:
     runs-on: macos-latest
@@ -21,11 +31,15 @@ jobs:
       - uses: actions/checkout@v3
       - run: chmod +x ./compile_macos.sh
       - run: ./compile_macos.sh
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload macOS Build
+        uses: actions/upload-artifact@v4
         with:
           name: clickshot-macos
           path: dist/macOS/
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload iOS .love File
+        uses: actions/upload-artifact@v4
         with:
           name: clickshot-ios
           path: dist/iOS/
@@ -34,14 +48,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: chmod +x ./compile_linux.sh
-      - run: |
+
+      - name: Install Dependencies
+        run: |
           sudo apt update
           sudo apt install -y libfuse2
+
+      - name: Prepare AppImage Tool
+        run: |
           wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O appimagetool.AppImage
           chmod +x appimagetool.AppImage
-          ./compile_linux.sh
-      - uses: actions/upload-artifact@v4
+
+      - name: Run Linux Compile Script
+        run: chmod +x ./compile_linux.sh && ./compile_linux.sh
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
         with:
           name: clickshot-linux
-          path: dist/Linux/
+          path: dist/Linux/ClickShot.AppImage

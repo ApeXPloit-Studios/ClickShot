@@ -9,6 +9,7 @@ set "ROOT_DIR=%~dp0"
 set "BUILD_DIR=%ROOT_DIR%build"
 set "DIST_DIR=%ROOT_DIR%dist\Windows"
 set "OTHER_DIR=%ROOT_DIR%dist\Other"
+set "LOVE2D_DIR=%ROOT_DIR%dist\Love2D"
 set "SRC_DIR=%ROOT_DIR%src"
 
 :: Check if source directory exists
@@ -29,6 +30,7 @@ echo Creating directories...
 mkdir "%BUILD_DIR%" 2>nul
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%" 2>nul
 if not exist "%OTHER_DIR%" mkdir "%OTHER_DIR%" 2>nul
+if not exist "%LOVE2D_DIR%" mkdir "%LOVE2D_DIR%" 2>nul
 
 :: Download LÖVE to build directory
 echo Downloading LÖVE...
@@ -56,6 +58,10 @@ cd "%BUILD_DIR%\game"
 powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%GAME_NAME%.zip' -Force"
 cd "%ROOT_DIR%"
 move "%BUILD_DIR%\%GAME_NAME%.zip" "%BUILD_DIR%\%GAME_NAME%.love" >nul
+
+:: Copy .love to dist\Love2D
+echo Copying .love file to dist\Love2D...
+copy "%BUILD_DIR%\%GAME_NAME%.love" "%LOVE2D_DIR%\%GAME_NAME%.love" /Y >nul
 
 :: Create executable with icon
 echo Creating executable with icon...
@@ -100,8 +106,9 @@ echo.
 echo Success! Your game has been compiled to:
 echo - Windows version: "%DIST_DIR%"
 echo - R36S version: "%OTHER_DIR%\R36S.love"
+echo - Love2D base: "%LOVE2D_DIR%\%GAME_NAME%.love"
 echo.
 echo Launching Windows version...
 start "" "%DIST_DIR%\%GAME_NAME%.exe"
 pause
-exit /b 0 
+exit /b 0
