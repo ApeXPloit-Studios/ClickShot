@@ -7,7 +7,13 @@ local main_menu = {
     title_scale = 1,
     title_rotation = 0,
     hover_effect = 0,
-    button_sound_played = false
+    button_sound_played = false,
+    discord_button = {
+        x = 0,
+        y = 0,
+        size = 48,  -- Size of the Discord button
+        hover = false
+    }
 }
 
 local buttons = {
@@ -22,12 +28,21 @@ end
 function main_menu.load()
     background_effect.load()
     
+    -- Load Discord icon
+    main_menu.discord_icon = love.graphics.newImage("assets/images/discord.png")
+    
     local screenW, screenH = love.graphics.getDimensions()
     local spacing = 20
+    
+    -- Position main buttons
     for i, b in ipairs(buttons) do
         b.x = (screenW - b.w) / 2
         b.y = (screenH / 2 - (#buttons * (b.h + spacing)) / 2) + ((i - 1) * (b.h + spacing))
     end
+    
+    -- Position Discord button in bottom right
+    main_menu.discord_button.x = screenW - main_menu.discord_button.size - 20
+    main_menu.discord_button.y = screenH - main_menu.discord_button.size - 20
 end
 
 function main_menu.update(dt)
@@ -46,16 +61,24 @@ function main_menu.update(dt)
     -- Update button hover states
     local mx, my = love.mouse.getPosition()
     local hover_found = false
+    
+    -- Update main buttons
     for _, b in ipairs(buttons) do
         local was_hover = b.hover
         b.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
         
-        -- Play hover sound when first hovering
         if b.hover and not was_hover then
-            -- Play hover sound if we add one
-            -- love.audio.play(assets.sounds.hover)
             hover_found = true
         end
+    end
+    
+    -- Update Discord button hover
+    local db = main_menu.discord_button
+    local was_hover = db.hover
+    db.hover = mx >= db.x and mx <= db.x + db.size and my >= db.y and my <= db.y + db.size
+    
+    if db.hover and not was_hover then
+        hover_found = true
     end
     
     -- Reset button sound flag when no buttons are hovered
@@ -97,7 +120,7 @@ function main_menu.draw()
     -- Restore transform
     love.graphics.pop()
     
-    -- Draw buttons with enhanced hover effects
+    -- Draw main buttons
     for _, b in ipairs(buttons) do
         -- Button background with hover effect
         local hover_scale = 1 + (b.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
@@ -108,9 +131,8 @@ function main_menu.draw()
         love.graphics.scale(hover_scale, hover_scale)
         love.graphics.translate(-b.w/2, -b.h/2)
         
-        -- Draw button background with rounded corners and glow
+        -- Draw button glow when hovered
         if b.hover then
-            -- Draw glow
             for i = 1, 3 do
                 local glow_alpha = 0.1 - (i * 0.03)
                 love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
@@ -139,10 +161,42 @@ function main_menu.draw()
         
         love.graphics.pop()
     end
+    
+    -- Draw Discord button
+    local db = main_menu.discord_button
+    local hover_scale = 1 + (db.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
+    
+    love.graphics.push()
+    love.graphics.translate(db.x + db.size/2, db.y + db.size/2)
+    love.graphics.scale(hover_scale, hover_scale)
+    love.graphics.translate(-db.size/2, -db.size/2)
+    
+    -- Draw button glow when hovered
+    if db.hover then
+        for i = 1, 3 do
+            local glow_alpha = 0.1 - (i * 0.03)
+            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
+            love.graphics.circle("fill", db.size/2, db.size/2, db.size/2 + i*2)
+        end
+    end
+    
+    -- Draw Discord icon
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(main_menu.discord_icon, 0, 0, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
+    
+    love.graphics.pop()
 end
 
 function main_menu.mousepressed(x, y, button)
     if button == 1 then
+        -- Check Discord button first
+        local db = main_menu.discord_button
+        if x >= db.x and x <= db.x + db.size and y >= db.y and y <= db.y + db.size then
+            love.system.openURL("https://discord.gg/PpWupysxU8")
+            return
+        end
+        
+        -- Check other buttons
         for _, b in ipairs(buttons) do
             if b.hover then
                 -- Play click sound

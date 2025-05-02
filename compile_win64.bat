@@ -57,9 +57,20 @@ powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%G
 cd "%ROOT_DIR%"
 move "%BUILD_DIR%\%GAME_NAME%.zip" "%BUILD_DIR%\%GAME_NAME%.love" >nul
 
-:: Create executable
-echo Creating executable...
+:: Create executable with icon
+echo Creating executable with icon...
 copy /b "%BUILD_DIR%\love-%LOVE_VERSION%-win64\love.exe"+"%BUILD_DIR%\%GAME_NAME%.love" "%BUILD_DIR%\%GAME_NAME%.exe" >nul
+
+:: Copy icon files
+echo Copying icon files...
+copy "%SRC_DIR%\ClickShot-Icon.ico" "%DIST_DIR%\%GAME_NAME%.ico" /Y >nul
+copy "%SRC_DIR%\ClickShot-Icon.png" "%DIST_DIR%\%GAME_NAME%.png" /Y >nul
+
+:: Set icon for the executable using ResourceHacker
+echo Setting executable icon...
+powershell -Command "Invoke-WebRequest -Uri 'http://www.angusj.com/resourcehacker/resource_hacker.zip' -OutFile '%BUILD_DIR%\resource_hacker.zip'"
+powershell -Command "Expand-Archive -Path '%BUILD_DIR%\resource_hacker.zip' -DestinationPath '%BUILD_DIR%\resource_hacker' -Force"
+"%BUILD_DIR%\resource_hacker\ResourceHacker.exe" -open "%BUILD_DIR%\%GAME_NAME%.exe" -save "%BUILD_DIR%\%GAME_NAME%.exe" -action addoverwrite -res "%DIST_DIR%\%GAME_NAME%.ico" -mask ICONGROUP,1,0
 
 :: Copy Windows files
 echo Copying files to Windows directory...
