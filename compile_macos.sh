@@ -9,6 +9,7 @@ BUILD_DIR="$ROOT_DIR/build"
 DIST_DIR="$ROOT_DIR/dist/macOS"
 IOS_DIR="$ROOT_DIR/dist/iOS"
 SRC_DIR="$ROOT_DIR/src"
+ICON_PATH="$SRC_DIR/ClickShot-Icon.icns"
 
 # Check if source directory exists
 if [ ! -d "$SRC_DIR" ]; then
@@ -62,6 +63,19 @@ mv "$BUILD_DIR/$GAME_NAME.zip" "$BUILD_DIR/$GAME_NAME.love"
 echo "Creating application bundle..."
 cp -R "$BUILD_DIR/love.app" "$BUILD_DIR/$GAME_NAME.app"
 cp "$BUILD_DIR/$GAME_NAME.love" "$BUILD_DIR/$GAME_NAME.app/Contents/Resources/"
+
+# Copy and set up icon
+if [ -f "$ICON_PATH" ]; then
+    echo "Setting up app icon..."
+    # Copy icon to Resources directory
+    cp "$ICON_PATH" "$BUILD_DIR/$GAME_NAME.app/Contents/Resources/"
+    # Update Info.plist to use the icon
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile ClickShot-Icon.icns" "$BUILD_DIR/$GAME_NAME.app/Contents/Info.plist"
+    # Remove the default LÖVE icon
+    rm -f "$BUILD_DIR/$GAME_NAME.app/Contents/Resources/love.icns"
+else
+    echo "Warning: Icon file not found at $ICON_PATH"
+fi
 
 # Update Info.plist
 echo "Updating Info.plist..."
