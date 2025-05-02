@@ -9,7 +9,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 DIST_DIR="$ROOT_DIR/dist/Linux"
 SRC_DIR="$ROOT_DIR/src"
-APPIMAGE_TOOL="./appimagetool.AppImage"
+APPIMAGE_TOOL="$ROOT_DIR/appimagetool.AppImage"
 
 mkdir -p "$BUILD_DIR" "$DIST_DIR"
 
@@ -34,10 +34,17 @@ echo "[3/4] Extracting AppImage..."
 "$LOVE_APPIMAGE" --appimage-extract > /dev/null
 APPDIR="$BUILD_DIR/appdir"
 mv squashfs-root "$APPDIR"
+mkdir -p "$APPDIR/usr/bin"
 cp "$BUILD_DIR/$GAME_NAME.love" "$APPDIR/usr/bin/"
 
 # Rename love binary to game name
-mv "$APPDIR/usr/bin/love" "$APPDIR/usr/bin/$GAME_NAME"
+if [ -f "$APPDIR/usr/bin/love" ]; then
+  mv "$APPDIR/usr/bin/love" "$APPDIR/usr/bin/$GAME_NAME"
+  chmod +x "$APPDIR/usr/bin/$GAME_NAME"
+else
+  echo "❌ Error: 'love' binary not found in extracted AppImage."
+  exit 1
+fi
 
 # Add AppRun
 echo -e "#!/bin/bash\nexec \"\${APPDIR}/usr/bin/$GAME_NAME\" \"\${APPDIR}/usr/bin/$GAME_NAME.love\"" > "$APPDIR/AppRun"
