@@ -115,4 +115,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-android
-          path: build/ClickShot-Android/apksigned/ClickShot-unsigned-aligned-signed.apk
+          path: build/ClickShot-Android/*-aligned-*.apk
