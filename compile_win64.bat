@@ -8,7 +8,6 @@ set "LOVE_URL=https://github.com/love2d/love/releases/download/%LOVE_VERSION%/lo
 set "ROOT_DIR=%~dp0"
 set "BUILD_DIR=%ROOT_DIR%build"
 set "DIST_DIR=%ROOT_DIR%dist\Windows"
-set "OTHER_DIR=%ROOT_DIR%dist\Other"
 set "LOVE2D_DIR=%ROOT_DIR%dist\Love2D"
 set "SRC_DIR=%ROOT_DIR%src"
 
@@ -29,7 +28,6 @@ if exist "%BUILD_DIR%" (
 echo Creating directories...
 mkdir "%BUILD_DIR%" 2>nul
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%" 2>nul
-if not exist "%OTHER_DIR%" mkdir "%OTHER_DIR%" 2>nul
 if not exist "%LOVE2D_DIR%" mkdir "%LOVE2D_DIR%" 2>nul
 
 :: Download LÖVE to build directory
@@ -54,6 +52,8 @@ if not exist "%BUILD_DIR%\love-%LOVE_VERSION%-win64\love.exe" (
 echo Creating Windows version...
 mkdir "%BUILD_DIR%\game" 2>nul
 xcopy "%SRC_DIR%\*" "%BUILD_DIR%\game\" /E /Y /I >nul
+copy "%SRC_DIR%\conf.lua" "%BUILD_DIR%\game\conf.lua" /Y >nul
+copy "%SRC_DIR%\settings.lua" "%BUILD_DIR%\game\settings.lua" /Y >nul
 cd "%BUILD_DIR%\game"
 powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%GAME_NAME%.zip' -Force"
 cd "%ROOT_DIR%"
@@ -83,17 +83,6 @@ echo Copying files to Windows directory...
 copy "%BUILD_DIR%\%GAME_NAME%.exe" "%DIST_DIR%\" /Y >nul
 xcopy "%BUILD_DIR%\love-%LOVE_VERSION%-win64\*.dll" "%DIST_DIR%\" /Y >nul
 
-:: Create R36S version
-echo Creating R36S version...
-mkdir "%BUILD_DIR%\game_r36s" 2>nul
-xcopy "%SRC_DIR%\*" "%BUILD_DIR%\game_r36s\" /E /Y /I >nul
-copy "%SRC_DIR%\platforms\gmr36s_conf.lua" "%BUILD_DIR%\game_r36s\conf.lua" /Y >nul
-copy "%SRC_DIR%\platforms\gmr36s_settings.lua" "%BUILD_DIR%\game_r36s\settings.lua" /Y >nul
-cd "%BUILD_DIR%\game_r36s"
-powershell -Command "Compress-Archive -Path '*' -DestinationPath '%BUILD_DIR%\%GAME_NAME%_R36S.zip' -Force"
-cd "%ROOT_DIR%"
-move "%BUILD_DIR%\%GAME_NAME%_R36S.zip" "%OTHER_DIR%\R36S.love" >nul
-
 :: Copy license
 echo Copying license...
 copy "%ROOT_DIR%LICENSE.txt" "%DIST_DIR%\" /Y >nul 2>&1
@@ -105,7 +94,6 @@ rd /s /q "%BUILD_DIR%" 2>nul
 echo.
 echo Success! Your game has been compiled to:
 echo - Windows version: "%DIST_DIR%"
-echo - R36S version: "%OTHER_DIR%\R36S.love"
 echo - Love2D base: "%LOVE2D_DIR%\%GAME_NAME%.love"
 echo.
 echo Launching Windows version...
