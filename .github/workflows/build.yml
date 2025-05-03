@@ -2,45 +2,60 @@ name: Build ClickShot
 
 on:
   push:
-    branches: [ main ]  # or your default branch
+    branches: [ main ]
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
       - name: Run Windows Compile Script
         run: ./compile_win64.bat
+
+      - name: Zip Windows Build
+        run: powershell Compress-Archive -Path dist/Windows/* -DestinationPath dist/ClickShot-windows.zip
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-windows
-          path: dist/Windows/
+          path: dist/ClickShot-windows.zip
 
   build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
+
       - run: chmod +x ./compile_macos.sh
       - run: ./compile_macos.sh
+
+      - name: Zip macOS Build
+        run: |
+          cd dist
+          zip -r ClickShot-macos.zip macOS
 
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-macos
-          path: dist/macOS/
+          path: dist/ClickShot-macos.zip
 
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y libfuse2
+          sudo apt install -y libfuse2 zip
 
       - name: Prepare AppImage Tool
         run: |
@@ -50,40 +65,53 @@ jobs:
       - name: Run Linux Compile Script
         run: chmod +x ./compile_linux.sh && ./compile_linux.sh
 
+      - name: Make AppImage Executable
+        run: chmod +x dist/Linux/ClickShot.AppImage
+
+      - name: Zip Linux Build
+        run: |
+          cd dist
+          zip -r ClickShot-linux.zip Linux
+
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-linux
-          path: dist/Linux/ClickShot.AppImage
+          path: dist/ClickShot-linux.zip
 
   build-love2d:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
       - name: Create Love2D Package
         run: |
           mkdir -p dist/Love2D
           cd src
           zip -r ../dist/Love2D/ClickShot.love ./*
+          cd ../dist/Love2D
+          zip ClickShot-love2d.zip ClickShot.love
 
       - name: Upload Love2D Package
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-love2d
-          path: dist/Love2D/ClickShot.love
-          compression-level: 0
+          path: dist/Love2D/ClickShot-love2d.zip
 
   build-android:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'  # or '17' for LTS, adjust as needed
+          java-version: '21'
 
       - name: Build .love bundle
         run: |
@@ -112,8 +140,11 @@ jobs:
           cd build\ClickShot-Android
           java -jar uber-apk-signer.jar --apks ClickShot-unsigned.apk
 
+      - name: Zip Signed APK
+        run: powershell Compress-Archive -Path build\ClickShot-Android\*-aligned-*.apk -DestinationPath dist\ClickShot-android.zip
+
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-android
-          path: build/ClickShot-Android/*-aligned-*.apk
+          path: dist\ClickShot-android.zip
