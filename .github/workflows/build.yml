@@ -25,7 +25,8 @@ jobs:
           Rename-Item dist\Love2D\ClickShot.zip ClickShot.love
           Move-Item dist\Love2D\ClickShot.love dist\Love2D\ClickShot.love
 
-      - name: Merge .exe and build folder
+      - name: Merge .love with LÖVE exe
+        shell: cmd
         run: |
           copy /b love\love.exe+dist\Love2D\ClickShot.love dist\Windows.exe
           mkdir dist\Windows
