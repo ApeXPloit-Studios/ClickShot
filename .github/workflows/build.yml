@@ -99,7 +99,7 @@ jobs:
 
       - name: Copy .love to assets
         run: |
-          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\main.love
+          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\
 
       - name: Rebuild APK with apktool
         run: |
