@@ -92,7 +92,8 @@ jobs:
       - name: Finalize AppImage Package
         run: |
           cp build/appdir/usr/bin/love build/appdir/usr/bin/ClickShot
-          echo -e "#!/bin/bash\nexec \"\$APPDIR/usr/bin/ClickShot\" \"\$APPDIR/usr/bin/ClickShot.love\"" > build/appdir/AppRun
+          echo '#!/bin/bash
+exec "$APPDIR/usr/bin/ClickShot" "$APPDIR/usr/bin/ClickShot.love"' > build/appdir/AppRun
           chmod +x build/appdir/AppRun
           echo "[Desktop Entry]\nName=ClickShot\nExec=ClickShot\nIcon=ClickShot\nType=Application\nCategories=Game;" > build/appdir/ClickShot.desktop
           cp src/ClickShot-Icon.png build/appdir/ClickShot.png
