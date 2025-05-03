@@ -7,7 +7,7 @@ LOVE_URL="https://github.com/love2d/love/releases/download/$LOVE_VERSION/love-$L
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 DIST_DIR="$ROOT_DIR/dist/macOS"
-IOS_DIR="$ROOT_DIR/dist/iOS"
+LOVE2D_DIR="$ROOT_DIR/dist/Love2D"
 SRC_DIR="$ROOT_DIR/src"
 ICON_PATH="$SRC_DIR/ClickShot-Icon.icns"
 
@@ -26,7 +26,7 @@ fi
 # Create directories
 mkdir -p "$BUILD_DIR"
 mkdir -p "$DIST_DIR"
-mkdir -p "$IOS_DIR"
+mkdir -p "$LOVE2D_DIR"
 
 # Download LÖVE
 echo "Downloading LÖVE..."
@@ -90,18 +90,18 @@ if [ ! -d "$DIST_DIR/$GAME_NAME.app" ]; then
     exit 1
 fi
 
-# Copy .love file to iOS directory
-echo "Copying .love file to iOS directory..."
-cp "$BUILD_DIR/$GAME_NAME.love" "$IOS_DIR/"
-if [ ! -f "$IOS_DIR/$GAME_NAME.love" ]; then
-    echo "Failed to copy .love file to iOS directory"
+# Copy .love file to Love2D directory
+echo "Copying .love file to Love2D directory..."
+cp "$BUILD_DIR/$GAME_NAME.love" "$LOVE2D_DIR/"
+if [ ! -f "$LOVE2D_DIR/$GAME_NAME.love" ]; then
+    echo "Failed to copy .love file to Love2D directory"
     exit 1
 fi
 
 # Copy license
 if [ -f "$ROOT_DIR/LICENSE.txt" ]; then
     cp "$ROOT_DIR/LICENSE.txt" "$DIST_DIR/"
-    cp "$ROOT_DIR/LICENSE.txt" "$IOS_DIR/"
+    cp "$ROOT_DIR/LICENSE.txt" "$LOVE2D_DIR/"
 fi
 
 # Clean up build directory
@@ -110,5 +110,5 @@ rm -rf "$BUILD_DIR"
 
 echo ""
 echo "Done! Your game is in the '$DIST_DIR' folder."
-echo "iOS package is in the '$IOS_DIR' folder."
+echo "Love2D package is in the '$LOVE2D_DIR' folder."
 echo "" 

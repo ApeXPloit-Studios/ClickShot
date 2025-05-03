@@ -19,12 +19,6 @@ jobs:
           name: clickshot-windows
           path: dist/Windows/
 
-      - name: Upload Love2D .love File
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickshot-love2d
-          path: dist/Love2D/ClickShot.love
-
   build-macos:
     runs-on: macos-latest
     steps:
@@ -37,12 +31,6 @@ jobs:
         with:
           name: clickshot-macos
           path: dist/macOS/
-
-      - name: Upload iOS .love File
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickshot-ios
-          path: dist/iOS/
 
   build-linux:
     runs-on: ubuntu-latest
@@ -67,3 +55,20 @@ jobs:
         with:
           name: clickshot-linux
           path: dist/Linux/ClickShot.AppImage
+
+  build-love2d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create Love2D Package
+        run: |
+          mkdir -p dist/Love2D
+          cd src
+          zip -r ../dist/Love2D/ClickShot.love ./*
+
+      - name: Upload Love2D Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D/ClickShot.love
