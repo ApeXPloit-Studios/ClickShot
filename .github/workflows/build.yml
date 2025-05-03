@@ -12,36 +12,17 @@ jobs:
         with:
           lfs: true
 
-      - name: Download LÖVE for Windows
-        run: |
-          curl -L -o love.zip https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip
-          powershell Expand-Archive love.zip love
-
-      - name: Create .love file
-        run: |
-          mkdir dist
-          mkdir dist\Love2D
-          powershell Compress-Archive -Path src\* -DestinationPath dist\Love2D\ClickShot.zip
-          Rename-Item dist\Love2D\ClickShot.zip ClickShot.love
-          Move-Item dist\Love2D\ClickShot.love dist\Love2D\ClickShot.love
-
-      - name: Merge .love with LÖVE exe
-        shell: cmd
-        run: |
-          copy /b love\love.exe+dist\Love2D\ClickShot.love dist\Windows.exe
-          mkdir dist\Windows
-          move dist\Windows.exe dist\Windows\ClickShot.exe
-          copy love\*.dll dist\Windows\
-          copy love\license.txt dist\Windows\
+      - name: Run Windows Compile Script
+        run: ./compile_win64.bat
 
       - name: Zip Windows Build
-        run: powershell Compress-Archive -Path dist\Windows\* -DestinationPath dist\ClickShot-windows.zip
+        run: powershell Compress-Archive -Path dist/Windows/* -DestinationPath dist/ClickShot-windows.zip
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-windows
-          path: dist\ClickShot-windows.zip
+          path: dist/ClickShot-windows.zip
 
   build-macos:
     runs-on: macos-latest
@@ -50,26 +31,13 @@ jobs:
         with:
           lfs: true
 
-      - name: Build ClickShot.app
-        run: |
-          GAME_NAME="ClickShot"
-          LOVE_VERSION="11.5"
-          curl -L -o love.zip "https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-macos.zip"
-          unzip -q love.zip
-          mkdir -p dist/macOS dist/Love2D
-          cp -R love.app "${GAME_NAME}.app"
-          cd src && zip -q -r ../ClickShot.love . && cd ..
-          mv ClickShot.love "${GAME_NAME}.app/Contents/Resources/"
-          cp src/ClickShot-Icon.icns "${GAME_NAME}.app/Contents/Resources/" || echo "⚠️ Icon not found"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.apexploit.${GAME_NAME}" "${GAME_NAME}.app/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleName ${GAME_NAME}" "${GAME_NAME}.app/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile ClickShot-Icon.icns" "${GAME_NAME}.app/Contents/Info.plist" || echo "⚠️ No icon update"
-          mv "${GAME_NAME}.app" dist/macOS/
-          cp dist/macOS/${GAME_NAME}.app/Contents/Resources/ClickShot.love dist/Love2D/
+      - run: chmod +x ./compile_macos.sh
+      - run: ./compile_macos.sh
 
       - name: Zip macOS Build
-        run: cd dist && zip -r ClickShot-macos.zip macOS
-
+        run: |
+          cd dist
+          zip -r ClickShot-macos.zip macOS
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
         with:
@@ -83,54 +51,25 @@ jobs:
         with:
           lfs: true
 
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install -y libfuse2 zip curl
-
-      - name: Build Linux AppImage
+      - name: Install Dependencies
         run: |
-          GAME_NAME="ClickShot"
-          LOVE_VERSION="11.5"
-          mkdir -p build dist/Linux
-
-          # Create .love
-          mkdir -p build/game
-          cp -r src/* build/game/
-          cd build/game && zip -9 -r ../${GAME_NAME}.love . && cd ../..
-
-          # Download LÖVE AppImage
-          curl -L -o build/love.AppImage https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-x86_64.AppImage
-          chmod +x build/love.AppImage
-          ./build/love.AppImage --appimage-extract
-          mv squashfs-root build/appdir
-
-          # Setup AppDir
-          mkdir -p build/appdir/usr/bin
-          cp build/${GAME_NAME}.love build/appdir/usr/bin/
-          LOVE_BIN=$(find build/appdir -type f -name love -executable | head -n 1)
-          cp "$LOVE_BIN" build/appdir/usr/bin/${GAME_NAME}
-          chmod +x build/appdir/usr/bin/${GAME_NAME}
-          echo "#!/bin/bash" > build/appdir/AppRun
-          echo "exec \"\${APPDIR}/usr/bin/${GAME_NAME}\" \"\${APPDIR}/usr/bin/${GAME_NAME}.love\"" >> build/appdir/AppRun
-          chmod +x build/appdir/AppRun
-
-          echo "[Desktop Entry]" > build/appdir/${GAME_NAME}.desktop
-          echo "Name=${GAME_NAME}" >> build/appdir/${GAME_NAME}.desktop
-          echo "Exec=${GAME_NAME}" >> build/appdir/${GAME_NAME}.desktop
-          echo "Icon=${GAME_NAME}" >> build/appdir/${GAME_NAME}.desktop
-          echo "Type=Application" >> build/appdir/${GAME_NAME}.desktop
-          echo "Categories=Game;" >> build/appdir/${GAME_NAME}.desktop
-
-          cp src/ClickShot-Icon.png build/appdir/${GAME_NAME}.png || echo "⚠️ Icon missing"
-
-          # Download and run appimagetool
-          curl -L -o appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage
+          sudo apt update
+          sudo apt install -y libfuse2 zip
+      - name: Prepare AppImage Tool
+        run: |
+          wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O appimagetool.AppImage
           chmod +x appimagetool.AppImage
-          ./appimagetool.AppImage build/appdir dist/Linux/${GAME_NAME}.AppImage
+      - name: Run Linux Compile Script
+        run: chmod +x ./compile_linux.sh && ./compile_linux.sh
+
+      - name: Make AppImage Executable
+        run: chmod +x dist/Linux/ClickShot.AppImage
 
       - name: Zip Linux Build
-        run: cd dist && zip -r ClickShot-linux.zip Linux
-
-      - name: Upload Linux Build
+        run: |
+          cd dist
+          zip -r ClickShot-linux.zip Linux
+      - name: Upload Linux AppImage
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-linux
@@ -140,17 +79,62 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
-      - name: Create .love package
+      - name: Create Love2D Package
         run: |
           mkdir -p dist/Love2D
           cd src
           zip -r ../dist/Love2D/ClickShot.love ./*
           cd ../dist/Love2D
           zip ClickShot-love2d.zip ClickShot.love
-
-      - name: Upload .love file
+      - name: Upload Love2D Package
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-love2d
           path: dist/Love2D/ClickShot-love2d.zip
+
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build .love bundle
+        run: |
+          mkdir -p dist/Love2D
+          cd src
+          powershell Compress-Archive -Path * -DestinationPath ../dist/Love2D/game.zip
+          cd ../dist/Love2D
+          ren game.zip game.love
+          cd ../..
+      - name: Clone Android build tools repo
+        run: |
+          git clone https://github.com/ApeXPloit-Studios/ClickShot-Android.git build/ClickShot-Android
+      - name: Copy .love to assets
+        run: |
+          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\
+      - name: Rebuild APK with apktool
+        run: |
+          cd build\ClickShot-Android
+          java -jar apktool.jar b love_decoded -o ClickShot-unsigned.apk
+      - name: Sign APK
+        run: |
+          cd build\ClickShot-Android
+          java -jar uber-apk-signer.jar --apks ClickShot-unsigned.apk
+      - name: Zip Signed APK
+        run: powershell Compress-Archive -Path build\ClickShot-Android\*-aligned-*.apk -DestinationPath dist\ClickShot-android.zip
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-android
+          path: dist\ClickShot-android.zip
