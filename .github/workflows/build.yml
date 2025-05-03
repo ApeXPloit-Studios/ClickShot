@@ -2,68 +2,140 @@ name: Build ClickShot
 
 on:
   push:
-    branches: [ main ]  # or your default branch
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-windows:
+  build-windows-64:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Run Windows Compile Script
-        run: ./compile_win64.bat
+      - name: Download LÖVE 64-bit
+        run: |
+          curl -Lo love-win64.zip https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip
+          tar -xf love-win64.zip
 
-      - name: Upload Windows Build
-        uses: actions/upload-artifact@v4
+      - name: Build .love
+        run: |
+          mkdir dist
+          powershell -Command "Compress-Archive -Path src/* -DestinationPath dist/ClickShot.love"
+
+      - name: Bundle Windows 64-bit Build
+        run: |
+          mkdir dist/Windows64
+          copy dist\ClickShot.love love-11.5-win64\* dist\Windows64\
+          ren dist\Windows64\love.exe ClickShot.exe
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: clickshot-windows
-          path: dist/Windows/
+          name: clickshot-windows64
+          path: dist/Windows64/
 
-      - name: Upload Love2D .love File
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickshot-love2d
-          path: dist/Love2D/ClickShot.love
-
-  build-macos:
-    runs-on: macos-latest
+  build-windows-32:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-      - run: chmod +x ./compile_macos.sh
-      - run: ./compile_macos.sh
 
-      - name: Upload macOS Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickshot-macos
-          path: dist/macOS/
+      - name: Download LÖVE 32-bit
+        run: |
+          curl -Lo love-win32.zip https://github.com/love2d/love/releases/download/11.5/love-11.5-win32.zip
+          tar -xf love-win32.zip
 
-      - name: Upload iOS .love File
-        uses: actions/upload-artifact@v4
+      - name: Build .love
+        run: |
+          mkdir dist
+          powershell -Command "Compress-Archive -Path src/* -DestinationPath dist/ClickShot.love"
+
+      - name: Bundle Windows 32-bit Build
+        run: |
+          mkdir dist/Windows32
+          copy dist\ClickShot.love love-11.5-win32\* dist\Windows32\
+          ren dist\Windows32\love.exe ClickShot.exe
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: clickshot-ios
-          path: dist/iOS/
+          name: clickshot-windows32
+          path: dist/Windows32/
 
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Dependencies
+      - name: Install FUSE
+        run: sudo apt update && sudo apt install -y libfuse2
+
+      - name: Download AppImage Tool
         run: |
-          sudo apt update
-          sudo apt install -y libfuse2
+          curl -Lo appimagetool https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
 
-      - name: Prepare AppImage Tool
+      - name: Build .love
         run: |
-          wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O appimagetool.AppImage
-          chmod +x appimagetool.AppImage
+          mkdir -p dist
+          zip -r dist/ClickShot.love src/
 
-      - name: Run Linux Compile Script
-        run: chmod +x ./compile_linux.sh && ./compile_linux.sh
+      - name: Package AppImage
+        run: |
+          mkdir -p appdir/usr/bin
+          cp dist/ClickShot.love appdir/usr/bin/
+          cp /usr/share/icons/hicolor/256x256/apps/love.png appdir/
+          echo -e "[Desktop Entry]\nName=ClickShot\nExec=love ClickShot.love\nType=Application\nIcon=love" > appdir/ClickShot.desktop
+          ./appimagetool appdir dist/ClickShot.AppImage
 
-      - name: Upload Linux AppImage
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: clickshot-linux
-          path: dist/Linux/ClickShot.AppImage
+          path: dist/ClickShot.AppImage
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Java
+        run: |
+          sudo apt update
+          sudo apt install -y default-jdk zipalign
+
+      - name: Clone Android Template
+        run: |
+          git clone https://github.com/ApeXPloit-Studios/ClickShot-Android.git android-build
+
+      - name: Build .love File
+        run: |
+          mkdir -p android-build/love_decoded/assets
+          zip -r android-build/love_decoded/assets/main.love src/
+
+      - name: Build and Sign APK
+        working-directory: android-build
+        run: |
+          java -jar apktool.jar b love_decoded -o ClickShot-unsigned.apk
+          java -jar uber-apk-signer.jar --apks ClickShot-unsigned.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-android
+          path: android-build/apksigned/*.apk
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build .love file
+        run: |
+          mkdir -p dist
+          cd src && zip -r ../dist/ClickShot.love . && cd ..
+
+      - name: Bundle macOS App
+        run: |
+          mkdir -p dist/macOS/ClickShot.app/Contents/MacOS
+          cp dist/ClickShot.love dist/macOS/ClickShot.app/Contents/MacOS/
+          # If you have a signed LÖVE binary, you'd copy it here
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-macos
+          path: dist/macOS/
