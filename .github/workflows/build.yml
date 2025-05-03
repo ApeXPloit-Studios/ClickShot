@@ -72,6 +72,7 @@ jobs:
         with:
           name: clickshot-love2d
           path: dist/Love2D/ClickShot.love
+          compression-level: 0
 
   build-android:
     runs-on: windows-latest
