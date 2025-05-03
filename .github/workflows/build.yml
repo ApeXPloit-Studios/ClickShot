@@ -25,7 +25,7 @@ jobs:
       - name: Bundle ClickShot.exe (64-bit)
         run: |
           mkdir dist/Windows64
-          copy dist\ClickShot.love love-11.5-win64\* dist\Windows64\
+          Copy-Item "love-11.5-win64\*" -Destination "dist\Windows64\" -Recurse; Copy-Item "dist\ClickShot.love" -Destination "dist\Windows64\"
           ren dist\Windows64\love.exe ClickShot.exe
 
       - uses: actions/upload-artifact@v4
@@ -52,7 +52,7 @@ jobs:
       - name: Bundle ClickShot.exe (32-bit)
         run: |
           mkdir dist/Windows32
-          copy dist\ClickShot.love love-11.5-win32\* dist\Windows32\
+          Copy-Item "love-11.5-win32\*" -Destination "dist\Windows32\" -Recurse; Copy-Item "dist\ClickShot.love" -Destination "dist\Windows32\"
           ren dist\Windows32\love.exe ClickShot.exe
 
       - uses: actions/upload-artifact@v4
@@ -60,23 +60,51 @@ jobs:
           name: clickshot-windows32
           path: dist/Windows32/
 
-  build-linux:
+    build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install FUSE
-        run: sudo apt update && sudo apt install -y libfuse2
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libfuse2 curl zip
 
-      - name: Run Linux compile script
-        run: bash ./compile_linux.sh
+      - name: Set up Environment
+        run: |
+          mkdir -p build dist/Linux
+          cp -r src/* build/game/
+
+      - name: Build .love file
+        run: |
+          cd build/game
+          zip -9 -r ../ClickShot.love . > /dev/null
+          cd ../..
+
+      - name: Download and Extract LÖVE AppImage
+        run: |
+          curl -L https://github.com/love2d/love/releases/download/11.5/love-11.5-x86_64.AppImage -o build/love.AppImage
+          chmod +x build/love.AppImage
+          build/love.AppImage --appimage-extract > /dev/null
+          mv squashfs-root build/appdir
+          cp build/ClickShot.love build/appdir/usr/bin/
+
+      - name: Finalize AppImage Package
+        run: |
+          cp build/appdir/usr/bin/love build/appdir/usr/bin/ClickShot
+          echo -e "#!/bin/bash\nexec \"\$APPDIR/usr/bin/ClickShot\" \"\$APPDIR/usr/bin/ClickShot.love\"" > build/appdir/AppRun
+          chmod +x build/appdir/AppRun
+          echo "[Desktop Entry]\nName=ClickShot\nExec=ClickShot\nIcon=ClickShot\nType=Application\nCategories=Game;" > build/appdir/ClickShot.desktop
+          cp src/ClickShot-Icon.png build/appdir/ClickShot.png
+          curl -L https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -o appimagetool.AppImage
+          chmod +x appimagetool.AppImage
+          ./appimagetool.AppImage build/appdir dist/Linux/ClickShot.AppImage
 
       - uses: actions/upload-artifact@v4
         with:
           name: clickshot-linux
-          path: dist/Linux/
-
-  build-macos:
+          path: dist/Linux/ClickShot.AppImage
+build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
