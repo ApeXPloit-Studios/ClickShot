@@ -84,14 +84,14 @@ jobs:
           distribution: 'temurin'
           java-version: '21'  # or '17' for LTS, adjust as needed
 
-      - name: Install 7-Zip
-        run: choco install 7zip -y
-
       - name: Build .love bundle
         run: |
-          mkdir dist\Love2D
-          "C:\Program Files\7-Zip\7z.exe" a -tzip dist\Love2D\game.zip ./src\*
-          ren dist\Love2D\game.zip game.love
+          mkdir -p dist/Love2D
+          cd src
+          powershell Compress-Archive -Path * -DestinationPath ../dist/Love2D/game.zip
+          cd ../dist/Love2D
+          ren game.zip game.love
+          cd ../..
 
       - name: Clone Android build tools repo
         run: |
@@ -99,7 +99,7 @@ jobs:
 
       - name: Copy .love to assets
         run: |
-          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\main.love
+          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\
 
       - name: Rebuild APK with apktool
         run: |
