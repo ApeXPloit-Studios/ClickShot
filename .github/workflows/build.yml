@@ -20,8 +20,10 @@ jobs:
       - name: Create .love file
         run: |
           mkdir dist
-          mkdir dist/Love2D
-          powershell Compress-Archive -Path src\* -DestinationPath dist\Love2D\ClickShot.love
+          mkdir dist\Love2D
+          powershell Compress-Archive -Path src\* -DestinationPath dist\Love2D\ClickShot.zip
+          Rename-Item dist\Love2D\ClickShot.zip ClickShot.love
+          Move-Item dist\Love2D\ClickShot.love dist\Love2D\ClickShot.love
 
       - name: Merge .exe and build folder
         run: |
@@ -101,6 +103,7 @@ jobs:
           mv squashfs-root build/appdir
 
           # Setup AppDir
+          mkdir -p build/appdir/usr/bin
           cp build/${GAME_NAME}.love build/appdir/usr/bin/
           LOVE_BIN=$(find build/appdir -type f -name love -executable | head -n 1)
           cp "$LOVE_BIN" build/appdir/usr/bin/${GAME_NAME}
