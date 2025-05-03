@@ -72,3 +72,39 @@ jobs:
         with:
           name: clickshot-love2d
           path: dist/Love2D/ClickShot.love
+
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build .love bundle
+        run: |
+          mkdir -p dist/Love2D
+          cd src
+          powershell Compress-Archive -Path * -DestinationPath ../dist/Love2D/game.love
+          cd ..
+
+      - name: Clone Android build tools repo
+        run: |
+          git clone https://github.com/ApeXPloit-Studios/ClickShot-Android.git build/ClickShot-Android
+
+      - name: Copy .love to assets
+        run: |
+          copy dist\Love2D\game.love build\ClickShot-Android\love_decoded\assets\
+
+      - name: Rebuild APK with apktool
+        run: |
+          cd build\ClickShot-Android
+          apktool.bat b love_decoded -o ClickShot-unsigned.apk
+
+      - name: Sign APK
+        run: |
+          cd build\ClickShot-Android
+          java -jar uber-apk-signer.jar --apks ClickShot-unsigned.apk
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-android
+          path: build/ClickShot-Android/apksigned/ClickShot-unsigned-aligned-signed.apk
