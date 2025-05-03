@@ -82,8 +82,10 @@ jobs:
         run: |
           mkdir -p dist/Love2D
           cd src
-          powershell Compress-Archive -Path * -DestinationPath ../dist/Love2D/game.love
-          cd ..
+          powershell Compress-Archive -Path * -DestinationPath ../dist/Love2D/game.zip
+          cd ../dist/Love2D
+          ren game.zip game.love
+          cd ../..
 
       - name: Clone Android build tools repo
         run: |
