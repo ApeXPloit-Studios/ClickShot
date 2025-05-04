@@ -17,7 +17,8 @@ function assets.load()
         regular = love.graphics.newFont("assets/fonts/PixelifySans-Regular.ttf", 24),
         bold    = love.graphics.newFont("assets/fonts/PixelifySans-Bold.ttf", 24),
         semi    = love.graphics.newFont("assets/fonts/PixelifySans-SemiBold.ttf", 24),
-        medium  = love.graphics.newFont("assets/fonts/PixelifySans-Medium.ttf", 24)
+        medium  = love.graphics.newFont("assets/fonts/PixelifySans-Medium.ttf", 24),
+        title   = love.graphics.newFont("assets/fonts/PixelifySans-Bold.ttf", 48)
     }
 end
 

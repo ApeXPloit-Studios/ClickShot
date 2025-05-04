@@ -35,11 +35,22 @@ function game.load()
     game.shells = saved.shells
     shop.cosmetics = saved.cosmetics
     
+    -- Load workbench data
+    workbench.load()
+    
+    -- Initialize all upgrades to 0 first
+    for _, upgrade in ipairs(upgrades.list) do
+        upgrade.count = 0
+    end
+    
     -- Load upgrades if they exist in save data
     if saved.upgrades then
         for i, upgrade in ipairs(upgrades.list) do
-            if saved.upgrades[i] then
-                upgrade.count = saved.upgrades[i].count
+            if saved.upgrades[i] and saved.upgrades[i].count then
+                local count = tonumber(saved.upgrades[i].count) or 0
+                -- Clamp to [0, 100000] to prevent corruption
+                count = math.max(0, math.min(100000, math.floor(count)))
+                upgrade.count = count
                 upgrade:effect(game)  -- Apply the upgrade effect
             end
         end
@@ -291,49 +302,21 @@ function game.draw()
     pause_menu.draw()
 end
 
-function game.mousepressed(x, y, button)
-    if pause_menu.visible then
-        pause_menu.mousepressed(x, y, button)
-        return
-    end
-
+function game.toggle_shop()
     if game.shop_visible then
-        shop.mousepressed(x, y, button, game)
-        save.update(game.shells, shop.cosmetics)
-    elseif game.workbench_visible then
-        workbench.mousepressed(x, y, button, game)
-        save.update(game.shells, shop.cosmetics)
+        game.shop_visible = false
     else
-        -- Check upgrades panel clicks first
-        if x >= love.graphics.getWidth() - 280 then  -- 280 is upgrades panel width
-            upgrades.mousepressed(x, y, button, game)
-            save.update(game.shells, shop.cosmetics)
-            return
-        end
-        
-        -- Check button clicks
-        if button == 1 then
-            if game.buttons.shop.hover then
-                love.audio.play(assets.sounds.click)
-                game.toggle_shop()
-                return
-            elseif game.buttons.workbench.hover then
-                love.audio.play(assets.sounds.click)
-                game.toggle_workbench()
-                return
-            end
-        end
-        
-        -- Check gun clicks last, and only if we're in the game area
-        if button == 1 and x < love.graphics.getWidth() - 280 then
-            if gun.isClicked(x, y) then
-                local clicked = gun.shoot()
-                if clicked then
-                    game.shells = game.shells + 1
-                    save.update(game.shells, shop.cosmetics)
-                end
-            end
-        end
+        game.shop_visible = true
+        game.workbench_visible = false
+    end
+end
+
+function game.toggle_workbench()
+    if game.workbench_visible then
+        game.workbench_visible = false
+    else
+        game.workbench_visible = true
+        game.shop_visible = false
     end
 end
 
@@ -342,28 +325,69 @@ function game.keypressed(key)
         pause_menu.toggle()
         save.update(game.shells, shop.cosmetics)
     end
-    if key == "s" then 
+    if key == "q" then 
         game.toggle_shop()
         save.update(game.shells, shop.cosmetics)
     end
-    if key == "w" then 
+    if key == "e" then 
         game.toggle_workbench()
         save.update(game.shells, shop.cosmetics)
     end
     if key == "f3" then game.debug = not game.debug end
 end
 
-function game.toggle_shop()
-    game.shop_visible = not game.shop_visible
-    if game.shop_visible then
-        game.workbench_visible = false
+function game.mousepressed(x, y, button)
+    if pause_menu.visible then
+        pause_menu.mousepressed(x, y, button)
+        return
     end
-end
 
-function game.toggle_workbench()
-    game.workbench_visible = not game.workbench_visible
-    if game.workbench_visible then
-        game.shop_visible = false
+    -- Check upgrades panel clicks first
+    if x >= love.graphics.getWidth() - 280 then  -- 280 is upgrades panel width
+        upgrades.mousepressed(x, y, button, game)
+        save.update(game.shells, shop.cosmetics)
+        return
+    end
+
+    -- Check button clicks
+    if button == 1 then
+        if game.buttons.shop.hover then
+            love.audio.play(assets.sounds.click)
+            game.toggle_shop()
+            return
+        elseif game.buttons.workbench.hover then
+            love.audio.play(assets.sounds.click)
+            game.toggle_workbench()
+            return
+        end
+    end
+
+    -- If a menu is open, still allow its mousepressed handler
+    if game.shop_visible then
+        shop.mousepressed(x, y, button, game)
+        save.update(game.shells, shop.cosmetics)
+        return
+    elseif game.workbench_visible then
+        workbench.mousepressed(x, y, button, game)
+        save.update(game.shells, shop.cosmetics)
+        return
+    end
+
+    -- Check gun clicks last, and only if we're in the game area
+    if button == 1 and x < love.graphics.getWidth() - 280 then
+        if gun.isClicked(x, y) then
+            local clicked = gun.shoot()
+            if clicked then
+                game.shells = game.shells + 1
+                -- Save all relevant data after every click
+                save.update(
+                    game.shells,
+                    shop.cosmetics,
+                    workbench.equipped,
+                    workbench.equipped_weapon
+                )
+            end
+        end
     end
 end
 

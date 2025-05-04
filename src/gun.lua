@@ -29,19 +29,15 @@ local hitbox = {
 }
 
 function gun.load()
-    sprite = assets.images.gun
-
-    local frame_width = sprite:getWidth() / total_frames
-    local frame_height = sprite:getHeight()
-    gun_width = frame_width
-    gun_height = frame_height
-
-    for i = 0, total_frames - 1 do
-        table.insert(quads, love.graphics.newQuad(i * frame_width, 0, frame_width, frame_height, sprite:getDimensions()))
-    end
+    -- Load default pistol sprite
+    local default_sprite = love.graphics.newImage("assets/images/pistol/fire_pistol.png")
+    default_sprite:setFilter("nearest", "nearest")
+    gun.setSprite(default_sprite)
 end
 
 function gun.update(dt)
+    if not sprite then return end  -- Don't update if no sprite is set
+
     local now = love.timer.getTime()
 
     -- Remove old clicks
@@ -76,6 +72,8 @@ function gun.update(dt)
 end
 
 function gun.draw()
+    if not sprite then return end  -- Don't draw if no sprite is set
+
     -- Draw hitbox for debugging
     if love.keyboard.isDown('f3') then
         local hitbox_width = gun_width * scale * hitbox.width_percent
@@ -100,6 +98,8 @@ function gun.draw()
 end
 
 function gun.isClicked(mx, my)
+    if not sprite then return false end  -- Don't process clicks if no sprite is set
+
     -- Calculate actual hitbox dimensions
     local hitbox_width = gun_width * scale * hitbox.width_percent
     local hitbox_height = gun_height * scale * hitbox.height_percent
@@ -120,6 +120,8 @@ function gun.isClicked(mx, my)
 end
 
 function gun.shoot()
+    if not sprite then return false end  -- Don't shoot if no sprite is set
+
     local now = love.timer.getTime()
     if now - last_click_time < click_cooldown then
         return false
@@ -134,6 +136,8 @@ function gun.shoot()
 end
 
 function gun.setSprite(newSprite)
+    if not newSprite then return end  -- Don't set if no sprite provided
+    
     sprite = newSprite
     -- rebuild quads
     quads = {}

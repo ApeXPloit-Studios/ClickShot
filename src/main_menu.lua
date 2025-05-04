@@ -13,7 +13,8 @@ local main_menu = {
         y = 0,
         size = 48,  -- Size of the Discord button
         hover = false
-    }
+    },
+    version = "1.1.0-alpha"  -- Current version
 }
 
 local buttons = {
@@ -23,6 +24,28 @@ local buttons = {
 -- Only add exit button if not on iOS
 if love.system.getOS() ~= "iOS" then
     table.insert(buttons, { text = "Exit", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() love.event.quit() end })
+end
+
+-- Function to get OS-specific version string
+function main_menu.getVersionString()
+    local os = love.system.getOS()
+    local prefix = ""
+    
+    if os == "Windows" then
+        prefix = "Win"
+    elseif os == "OS X" then
+        prefix = "Mac"
+    elseif os == "Linux" then
+        prefix = "Linux"
+    elseif os == "Android" then
+        prefix = "Android"
+    elseif os == "iOS" then
+        prefix = "iOS"
+    else
+        prefix = os
+    end
+    
+    return prefix .. " v" .. main_menu.version
 end
 
 function main_menu.load()
@@ -92,10 +115,10 @@ function main_menu.draw()
     background_effect.draw()
     
     -- Draw title with animation
-    love.graphics.setFont(assets.fonts.bold)
+    love.graphics.setFont(assets.fonts.title)  -- Use title font instead of bold
     local title = "ClickShot"
-    local tw = assets.fonts.bold:getWidth(title)
-    local th = assets.fonts.bold:getHeight()
+    local tw = assets.fonts.title:getWidth(title)
+    local th = assets.fonts.title:getHeight()
     local titleX = (love.graphics.getWidth() - tw) / 2
     local titleY = 100
     
@@ -121,6 +144,7 @@ function main_menu.draw()
     love.graphics.pop()
     
     -- Draw main buttons
+    love.graphics.setFont(assets.fonts.bold)  -- Set back to regular bold font for buttons
     for _, b in ipairs(buttons) do
         -- Button background with hover effect
         local hover_scale = 1 + (b.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
@@ -185,6 +209,12 @@ function main_menu.draw()
     love.graphics.draw(main_menu.discord_icon, 0, 0, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
     
     love.graphics.pop()
+
+    -- Draw version string in bottom left
+    love.graphics.setFont(assets.fonts.regular)
+    local version_text = main_menu.getVersionString()
+    love.graphics.setColor(0.7, 0.7, 0.7, 0.8)  -- Slightly transparent gray
+    love.graphics.print(version_text, 20, love.graphics.getHeight() - 30)
 end
 
 function main_menu.mousepressed(x, y, button)
