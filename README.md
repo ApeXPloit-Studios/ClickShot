@@ -46,8 +46,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE.txt) f
 - **ApeXPloit Studios:** Developer
 - **LÖVE2D:** Game framework
 
----
 
 **Coming Soon to Steam, Apple App Store, and Google Play!**
 
 Enjoy playing ClickShot! If you have any questions or feedback, feel free to open an issue or contact me at aspenini@apexploitstudios.org
+
+![gun-stacked](https://github.com/user-attachments/assets/bec41065-d837-414f-88f3-adac2def6f37)
