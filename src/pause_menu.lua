@@ -3,6 +3,7 @@ local scene = require("scene")
 local save = require("save")
 local shop = require("shop")
 local background_effect = require("background_effect")
+local settings = require("settings")
 
 local pause_menu = {
     visible = false,
@@ -30,6 +31,7 @@ end
 -- Initialize buttons
 pause_menu.buttons = {
     { text = "Resume", hover = false, action = resumeAction },
+    { text = "Settings", hover = false, action = function() settings.toggle() end },
     { text = "Main Menu", hover = false, action = mainMenuAction }
 }
 
@@ -65,6 +67,9 @@ function pause_menu.update(dt)
     -- Update background effect
     background_effect.update(dt)
     
+    -- Update settings
+    settings.update(dt)
+    
     -- Update button hover states
     local mx, my = love.mouse.getPosition()
     for _, b in ipairs(pause_menu.buttons) do
@@ -88,6 +93,9 @@ function pause_menu.draw()
     background_effect.draw()
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+
+    -- Draw settings if visible
+    settings.draw()
 
     -- Draw menu
     local w, h = 400, 300
@@ -169,6 +177,12 @@ end
 function pause_menu.mousepressed(mx, my, button)
     if not pause_menu.visible or button ~= 1 then return end
 
+    -- Check settings first
+    if settings.visible then
+        settings.mousepressed(mx, my, button)
+        return
+    end
+
     for _, b in ipairs(pause_menu.buttons) do
         if b._bounds and b.hover then
             -- Play click sound
@@ -176,6 +190,12 @@ function pause_menu.mousepressed(mx, my, button)
             b.action()
             return
         end
+    end
+end
+
+function pause_menu.mousereleased(mx, my, button)
+    if settings.visible then
+        settings.mousereleased(mx, my, button)
     end
 end
 

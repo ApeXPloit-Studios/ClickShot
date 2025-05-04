@@ -25,37 +25,6 @@ jobs:
           name: clickshot-macos
           path: dist/ClickShot-macos.zip
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y libfuse2 zip
-      - name: Prepare AppImage Tool
-        run: |
-          wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O appimagetool.AppImage
-          chmod +x appimagetool.AppImage
-      - name: Run Linux Compile Script
-        run: chmod +x ./compile_linux.sh && ./compile_linux.sh
-
-      - name: Make AppImage Executable
-        run: chmod +x dist/Linux/ClickShot.AppImage
-
-      - name: Zip Linux Build
-        run: |
-          cd dist
-          zip -r ClickShot-linux.zip Linux
-      - name: Upload Linux AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: clickshot-linux
-          path: dist/ClickShot-linux.zip
-
   build-love2d:
     runs-on: ubuntu-latest
     steps:

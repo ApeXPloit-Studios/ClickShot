@@ -46,6 +46,14 @@ function love.mousepressed(x, y, button, istouch, presses)
     end
 end
 
+function love.mousereleased(x, y, button, istouch, presses)
+    if scene.current == "game" then
+        pause_menu.mousereleased(x, y, button)
+    elseif scene.current == "menu" then
+        main_menu.mousereleased(x, y, button)
+    end
+end
+
 function love.keypressed(key)
     if scene.current == "game" then
         if key == "escape" then

@@ -14,7 +14,8 @@ local main_menu = {
         size = 48,  -- Size of the Discord button
         hover = false
     },
-    version = "1.1.0-alpha"  -- Current version
+    version = "1.1.0-alpha",  -- Current version
+    mute = false
 }
 
 local buttons = {
@@ -66,6 +67,16 @@ function main_menu.load()
     -- Position Discord button in bottom right
     main_menu.discord_button.x = screenW - main_menu.discord_button.size - 20
     main_menu.discord_button.y = screenH - main_menu.discord_button.size - 20
+    
+    -- Load mute state
+    local mute_data = love.filesystem.read("ClickShot.dat")
+    if mute_data == "muted" then
+        main_menu.mute = true
+        love.audio.setVolume(0)
+    else
+        main_menu.mute = false
+        love.audio.setVolume(1)
+    end
 end
 
 function main_menu.update(dt)
@@ -103,6 +114,9 @@ function main_menu.update(dt)
     if db.hover and not was_hover then
         hover_found = true
     end
+    
+    -- Mute button hover
+    main_menu.mute_hover = mx >= 20 and mx <= 100 and my >= 20 and my <= 52
     
     -- Reset button sound flag when no buttons are hovered
     if not hover_found then
@@ -186,6 +200,15 @@ function main_menu.draw()
         love.graphics.pop()
     end
     
+    -- Draw mute button (top left)
+    love.graphics.setFont(assets.fonts.bold)
+    local mute_text = main_menu.mute and "Unmute" or "Mute"
+    local color = main_menu.mute_hover and {0.5, 0.5, 1} or {0.2, 0.2, 0.2}
+    love.graphics.setColor(color)
+    love.graphics.rectangle("fill", 20, 20, 80, 32, 8, 8)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf(mute_text, 20, 26, 80, "center")
+    
     -- Draw Discord button
     local db = main_menu.discord_button
     local hover_scale = 1 + (db.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
@@ -219,7 +242,20 @@ end
 
 function main_menu.mousepressed(x, y, button)
     if button == 1 then
-        -- Check Discord button first
+        -- Mute button
+        if x >= 20 and x <= 100 and y >= 20 and y <= 52 then
+            main_menu.mute = not main_menu.mute
+            if main_menu.mute then
+                love.audio.setVolume(0)
+                love.filesystem.write("ClickShot.dat", "muted")
+            else
+                love.audio.setVolume(1)
+                love.filesystem.write("ClickShot.dat", "unmuted")
+            end
+            return
+        end
+        
+        -- Check Discord button
         local db = main_menu.discord_button
         if x >= db.x and x <= db.x + db.size and y >= db.y and y <= db.y + db.size then
             love.system.openURL("https://discord.gg/PpWupysxU8")
@@ -236,6 +272,10 @@ function main_menu.mousepressed(x, y, button)
             end
         end
     end
+end
+
+function main_menu.mousereleased(x, y, button)
+    -- No action needed
 end
 
 return main_menu
