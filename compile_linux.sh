@@ -11,6 +11,12 @@ DIST_DIR="$ROOT_DIR/dist/Linux"
 SRC_DIR="$ROOT_DIR/src"
 APPIMAGE_TOOL="$ROOT_DIR/appimagetool.AppImage"
 
+# Ensure required tools exist
+if ! command -v zip &>/dev/null; then
+  echo "❌ Error: 'zip' command not found. Install it with: sudo apt install zip"
+  exit 1
+fi
+
 mkdir -p "$BUILD_DIR" "$DIST_DIR"
 
 # 1. Make .love file
