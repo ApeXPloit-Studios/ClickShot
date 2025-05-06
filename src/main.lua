@@ -6,6 +6,7 @@ local main_menu = require("main_menu")
 local scene = require("scene")
 local pause_menu = require("pause_menu")
 local scale_manager = require("scale_manager")
+local settings = require("settings")
 
 function love.load()
     -- Set window mode to 720p
@@ -16,34 +17,43 @@ function love.load()
         minheight = 720
     })
     
-    scene.load()  -- Initialize scene (including menu music)
+    -- Load settings first (includes volume settings)
+    settings.load()
+    
+    -- Then initialize scene (including music)
+    scene.load()  
     scene.current = "menu"
+    
+    -- Load other modules
     main_menu.load()
     game.load()
 end
 
-function love.update(dt)
-    if scene.current == "game" then
-        game.update(dt)
-    elseif scene.current == "menu" then
-        main_menu.update(dt)
+-- Handle scene-specific callbacks
+local function handleSceneCallback(callback, ...)
+    local current = scene.current
+    
+    if current == "game" then
+        if game[callback] then
+            return game[callback](...)
+        end
+    elseif current == "menu" then
+        if main_menu[callback] then
+            return main_menu[callback](...)
+        end
     end
+end
+
+function love.update(dt)
+    handleSceneCallback("update", dt)
 end
 
 function love.draw()
-    if scene.current == "game" then
-        game.draw()
-    elseif scene.current == "menu" then
-        main_menu.draw()
-    end
+    handleSceneCallback("draw")
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-    if scene.current == "game" then
-        game.mousepressed(x, y, button)
-    elseif scene.current == "menu" then
-        main_menu.mousepressed(x, y, button)
-    end
+    handleSceneCallback("mousepressed", x, y, button)
 end
 
 function love.mousereleased(x, y, button, istouch, presses)

@@ -77,11 +77,6 @@ function pause_menu.update(dt)
             local was_hover = b.hover
             b.hover = mx >= b._bounds.x and mx <= b._bounds.x + b._bounds.w and 
                      my >= b._bounds.y and my <= b._bounds.y + b._bounds.h
-            
-            -- Could add hover sound here if we want
-            if b.hover and not was_hover then
-                -- love.audio.play(assets.sounds.hover)
-            end
         end
     end
 end
@@ -94,8 +89,11 @@ function pause_menu.draw()
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-    -- Draw settings if visible
+    -- Draw settings if visible and return (modal)
+    if settings.visible then
     settings.draw()
+        return
+    end
 
     -- Draw menu
     local w, h = 400, 300
@@ -130,16 +128,13 @@ function pause_menu.draw()
 
     -- Draw buttons
     for _, b in ipairs(pause_menu.buttons) do
-        if b._bounds then
             -- Button background with hover effect
             local hover_scale = b.hover and 1.1 or 1
             local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
-            
             love.graphics.push()
             love.graphics.translate(b._bounds.x + b._bounds.w/2, b._bounds.y + b._bounds.h/2)
             love.graphics.scale(hover_scale, hover_scale)
             love.graphics.translate(-b._bounds.w/2, -b._bounds.h/2)
-            
             -- Draw button glow when hovered
             if b.hover then
                 for i = 1, 3 do
@@ -148,29 +143,23 @@ function pause_menu.draw()
                     love.graphics.rectangle("fill", -i*2, -i*2, b._bounds.w + i*4, b._bounds.h + i*4, 10 + i, 10 + i)
                 end
             end
-            
             -- Draw button background with rounded corners
             love.graphics.setColor(hover_color[1], hover_color[2], hover_color[3])
             love.graphics.rectangle("fill", 0, 0, b._bounds.w, b._bounds.h, 10, 10)
-            
             -- Draw button border
             love.graphics.setColor(0.5, 0.5, 0.5)
             love.graphics.rectangle("line", 0, 0, b._bounds.w, b._bounds.h, 10, 10)
-            
             -- Draw button text with shadow when hovered
             if b.hover then
                 love.graphics.setColor(0, 0, 0, 0.5)
                 love.graphics.print(b.text, (b._bounds.w - assets.fonts.bold:getWidth(b.text)) / 2 + 2, 
                                   (b._bounds.h - assets.fonts.bold:getHeight()) / 2 + 2)
             end
-            
             -- Draw button text
             love.graphics.setColor(1, 1, 1)
             love.graphics.print(b.text, (b._bounds.w - assets.fonts.bold:getWidth(b.text)) / 2, 
                               (b._bounds.h - assets.fonts.bold:getHeight()) / 2)
-            
             love.graphics.pop()
-        end
     end
 end
 
@@ -185,8 +174,14 @@ function pause_menu.mousepressed(mx, my, button)
 
     for _, b in ipairs(pause_menu.buttons) do
         if b._bounds and b.hover then
-            -- Play click sound
-            love.audio.play(assets.sounds.click)
+            -- Play click sound with correct volume
+            local click = assets.sounds.click
+            if click then
+                local sound_instance = click:clone()
+                scene.applySfxVolume(sound_instance)
+                sound_instance:play()
+            end
+            
             b.action()
             return
         end

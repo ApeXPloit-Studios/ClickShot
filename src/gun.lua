@@ -1,22 +1,30 @@
 local assets = require("assets")
+local scene = require("scene")
 
 local gun = {}
-local x, y = 400, 300
+
+-- Constants
+local DEFAULT_X = 400
+local DEFAULT_Y = 300
+local TOTAL_FRAMES = 12
+local BASE_SCALE = 4.0  -- Increased from 2.5 to 4.0 for larger gun
+local MIN_FRAME_TIME = 1 / 30  -- Increased from 24 to 30 for smoother animation
+local MAX_FRAME_TIME = 1 / 8   -- Increased from 6 to 8 for better timing
+local CLICK_COOLDOWN = 0.5
+local CLICK_HISTORY_DURATION = 1
+
+-- Sprite position
+local x, y = DEFAULT_X, DEFAULT_Y
 
 -- Sprite
 local sprite
 local quads = {}
-local total_frames = 12
 local frame = 1
 local timer = 0
 local gun_width, gun_height
 
--- Scale
-local scale = 4.0  -- Increased from 2.5 to 4.0 for larger gun
-
 -- Click timing
 local click_times = {}
-local click_cooldown = 0.5
 local last_click_time = 0
 local animating = false
 
@@ -42,7 +50,7 @@ function gun.update(dt)
 
     -- Remove old clicks
     for i = #click_times, 1, -1 do
-        if now - click_times[i] > 1 then
+        if now - click_times[i] > CLICK_HISTORY_DURATION then
             table.remove(click_times, i)
         end
     end
@@ -55,16 +63,14 @@ function gun.update(dt)
     end
 
     -- Faster animation based on click speed
-    local min_frame_time = 1 / 30  -- Increased from 24 to 30 for smoother animation
-    local max_frame_time = 1 / 8   -- Increased from 6 to 8 for better timing
-    local frame_duration = max_frame_time - ((max_frame_time - min_frame_time) * (cps / 2))
+    local frame_duration = MAX_FRAME_TIME - ((MAX_FRAME_TIME - MIN_FRAME_TIME) * (cps / 2))
 
     if animating then
         timer = timer + dt
         if timer >= frame_duration then
             timer = 0
             frame = frame + 1
-            if frame > total_frames then
+            if frame > TOTAL_FRAMES then
                 frame = 1
             end
         end
@@ -74,45 +80,41 @@ end
 function gun.draw()
     if not sprite then return end  -- Don't draw if no sprite is set
 
-    -- Draw hitbox for debugging
-    if love.keyboard.isDown('f3') then
-        local hitbox_width = gun_width * scale * hitbox.width_percent
-        local hitbox_height = gun_height * scale * hitbox.height_percent
-        local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
-        local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
-        
-        love.graphics.setColor(1, 0, 0, 0.5)
-        love.graphics.rectangle("fill", hitbox_x, hitbox_y, hitbox_width, hitbox_height)
-        love.graphics.setColor(1, 1, 1, 1)
-    end
-
     -- Draw gun sprite
     love.graphics.draw(
         sprite,
         quads[frame],
-        x - (gun_width * scale) / 2,
-        y - (gun_height * scale) / 2,
+        x - (gun_width * BASE_SCALE) / 2,
+        y - (gun_height * BASE_SCALE) / 2,
         0, -- no rotation
-        scale, scale
+        BASE_SCALE, BASE_SCALE
     )
+end
+
+-- Draw hitbox for debugging
+function gun.drawHitbox()
+    if not sprite then return end
+    
+    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
+    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
+    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
+    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
+    
+    love.graphics.setColor(1, 0, 0, 0.5)
+    love.graphics.rectangle("fill", hitbox_x, hitbox_y, hitbox_width, hitbox_height)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function gun.isClicked(mx, my)
     if not sprite then return false end  -- Don't process clicks if no sprite is set
 
     -- Calculate actual hitbox dimensions
-    local hitbox_width = gun_width * scale * hitbox.width_percent
-    local hitbox_height = gun_height * scale * hitbox.height_percent
+    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
+    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
     
     -- Calculate hitbox position with offset
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * scale * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * scale * hitbox.y_offset_percent)
-
-    -- Debug print for troubleshooting
-    if love.keyboard.isDown('f3') then
-        print(string.format("Mouse: (%d, %d), Hitbox: (%d, %d, %d, %d)", 
-            mx, my, hitbox_x, hitbox_y, hitbox_width, hitbox_height))
-    end
+    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
+    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
 
     -- Check if mouse is within hitbox bounds
     return mx >= hitbox_x and mx <= hitbox_x + hitbox_width and 
@@ -123,7 +125,7 @@ function gun.shoot()
     if not sprite then return false end  -- Don't shoot if no sprite is set
 
     local now = love.timer.getTime()
-    if now - last_click_time < click_cooldown then
+    if now - last_click_time < CLICK_COOLDOWN then
         return false
     end
 
@@ -131,7 +133,16 @@ function gun.shoot()
     table.insert(click_times, now)
 
     animating = true
-    love.audio.play(assets.sounds.click)
+    
+    -- Play the click sound with the correct volume
+    local click = assets.sounds.click
+    if click then
+        -- Use a copy of the sound to avoid affecting the original
+        local sound_instance = click:clone()
+        scene.applySfxVolume(sound_instance)
+        sound_instance:play()
+    end
+    
     return true
 end
 
@@ -141,11 +152,11 @@ function gun.setSprite(newSprite)
     sprite = newSprite
     -- rebuild quads
     quads = {}
-    local frame_width = sprite:getWidth() / total_frames
+    local frame_width = sprite:getWidth() / TOTAL_FRAMES
     local frame_height = sprite:getHeight()
     gun_width = frame_width
     gun_height = frame_height
-    for i = 0, total_frames - 1 do
+    for i = 0, TOTAL_FRAMES - 1 do
         table.insert(quads, love.graphics.newQuad(i * frame_width, 0, frame_width, frame_height, sprite:getDimensions()))
     end
 end
