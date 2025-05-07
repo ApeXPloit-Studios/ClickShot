@@ -6,4 +6,5 @@ function love.conf(t)
     t.window.minwidth = nil
     t.window.minheight = nil
     t.window.vsync = true
+    t.window.icon = "ClickShot-Icon.png"
 end

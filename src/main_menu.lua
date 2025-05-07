@@ -1,6 +1,7 @@
 local assets = require("assets")
 local scene = require("scene")
 local background_effect = require("background_effect")
+local settings = require("settings")
 
 local main_menu = {
     time = 0,
@@ -15,7 +16,7 @@ local main_menu = {
         hover = false
     },
     version = "1.1.0-alpha",  -- Current version
-    mute = false
+    mute_hover = false
 }
 
 local buttons = {
@@ -67,16 +68,6 @@ function main_menu.load()
     -- Position Discord button in bottom right
     main_menu.discord_button.x = screenW - main_menu.discord_button.size - 20
     main_menu.discord_button.y = screenH - main_menu.discord_button.size - 20
-    
-    -- Load mute state
-    local mute_data = love.filesystem.read("ClickShot.dat")
-    if mute_data == "muted" then
-        main_menu.mute = true
-        love.audio.setVolume(0)
-    else
-        main_menu.mute = false
-        love.audio.setVolume(1)
-    end
 end
 
 function main_menu.update(dt)
@@ -202,7 +193,7 @@ function main_menu.draw()
     
     -- Draw mute button (top left)
     love.graphics.setFont(assets.fonts.bold)
-    local mute_text = main_menu.mute and "Unmute" or "Mute"
+    local mute_text = scene.isMuted() and "Unmute" or "Mute"
     local color = main_menu.mute_hover and {0.5, 0.5, 1} or {0.2, 0.2, 0.2}
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", 20, 20, 80, 32, 8, 8)
@@ -244,14 +235,8 @@ function main_menu.mousepressed(x, y, button)
     if button == 1 then
         -- Mute button
         if x >= 20 and x <= 100 and y >= 20 and y <= 52 then
-            main_menu.mute = not main_menu.mute
-            if main_menu.mute then
-                love.audio.setVolume(0)
-                love.filesystem.write("ClickShot.dat", "muted")
-            else
-                love.audio.setVolume(1)
-                love.filesystem.write("ClickShot.dat", "unmuted")
-            end
+            -- Use scene's centralized mute toggle function
+            scene.toggleMute()
             return
         end
         
@@ -265,8 +250,14 @@ function main_menu.mousepressed(x, y, button)
         -- Check other buttons
         for _, b in ipairs(buttons) do
             if b.hover then
-                -- Play click sound
-                love.audio.play(assets.sounds.click)
+                -- Play click sound with correct volume
+                local click = assets.sounds.click
+                if click then
+                    local sound_instance = click:clone()
+                    scene.applySfxVolume(sound_instance)
+                    sound_instance:play()
+                end
+                
                 b.action()
                 return
             end

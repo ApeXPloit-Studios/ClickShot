@@ -7,6 +7,17 @@ local upgrades = require("upgrades")
 local pause_menu = require("pause_menu")
 local background = require("background")
 local game_background = require("game_background")
+local scene = require("scene")
+local settings = require("settings")
+
+-- Constants
+local GAME_WIDTH = 1000
+local UPGRADES_PANEL_WIDTH = 280
+local BUTTON_WIDTH = 150
+local BUTTON_HEIGHT = 40
+local BUTTON_SPACING = 20
+local UPGRADE_HEIGHT = 80
+local UPGRADE_SPACING = 20
 
 local game = {
     debug = false,
@@ -63,6 +74,16 @@ function game.load()
     end
 end
 
+-- Helper function to save game state
+local function saveGameState()
+    save.update(
+        game.shells, 
+        shop.cosmetics,
+        workbench.equipped,
+        workbench.equipped_weapon
+    )
+end
+
 function game.update(dt)
     if pause_menu.visible then
         pause_menu.update(dt)
@@ -102,7 +123,7 @@ function game.update(dt)
             local clicked = gun.shoot()
             if clicked then
                 game.shells = game.shells + 1
-                save.update(game.shells, shop.cosmetics)
+                saveGameState()
             end
         end
 
@@ -122,17 +143,17 @@ function game.update(dt)
         -- Start button to toggle pause menu
         if game.gamepad:isGamepadDown("start") then
             pause_menu.toggle()
-            save.update(game.shells, shop.cosmetics)
+            saveGameState()
         end
 
         -- A button to select current option
         if game.gamepad:isGamepadDown("a") then
             if game.selected_button == 2 then
                 game.toggle_shop()
-                save.update(game.shells, shop.cosmetics)
+                saveGameState()
             elseif game.selected_button == 3 then
                 game.toggle_workbench()
-                save.update(game.shells, shop.cosmetics)
+                saveGameState()
             end
         end
     end
@@ -145,10 +166,42 @@ function game.update(dt)
     game_background.update(dt, game.shells)
 end
 
+-- Helper function to draw a button
+local function drawButton(button, x, y, width, height)
+    local buttonScale = 1 + (button.hover and math.sin(game.hover_effect) * 0.1 or 0)
+    
+    love.graphics.push()
+    love.graphics.translate(x + width/2, y + height/2)
+    love.graphics.scale(buttonScale, buttonScale)
+    love.graphics.translate(-width/2, -height/2)
+    
+    -- Draw button glow when hovered
+    if button.hover then
+        for i = 1, 3 do
+            local glow_alpha = 0.1 - (i * 0.03)
+            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
+            love.graphics.rectangle("fill", -i*2, -i*2, width + i*4, height + i*4, 10 + i, 10 + i)
+        end
+    end
+    
+    love.graphics.setColor(button.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
+    love.graphics.rectangle("fill", 0, 0, width, height, 6, 6)
+    love.graphics.setColor(0.5, 0.5, 0.5)
+    love.graphics.rectangle("line", 0, 0, width, height, 6, 6)
+    
+    -- Draw text with shadow when hovered
+    if button.hover then
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.printf(button.text, 2, 12, width, "center")
+    end
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf(button.text, 0, 10, width, "center")
+    love.graphics.pop()
+end
+
 function game.draw()
     -- Draw game area (slightly smaller to accommodate upgrades panel)
-    local gameWidth = 1000  -- Fixed game area width
-    love.graphics.setScissor(0, 0, gameWidth, 720)
+    love.graphics.setScissor(0, 0, GAME_WIDTH, 720)
     
     -- Draw backgrounds
     game_background.draw()
@@ -161,7 +214,7 @@ function game.draw()
     
     -- Center the gun
     local oldX = gun.getPosition()
-    gun.setPosition(gameWidth / 2)
+    gun.setPosition(GAME_WIDTH / 2)
     gun.draw()
     if game.debug then
         gun.drawHitbox()
@@ -169,116 +222,66 @@ function game.draw()
     gun.setPosition(oldX)
     
     -- Draw menu buttons at bottom
-    local buttonSpacing = 20
-    local buttonWidth = 150
-    local buttonHeight = 40
-    local buttonY = 720 - buttonHeight - 20  -- 20px padding from bottom
-    local totalButtonWidth = (buttonWidth * 2) + buttonSpacing
-    local startX = (gameWidth - totalButtonWidth) / 2
+    local buttonY = 720 - BUTTON_HEIGHT - 20  -- 20px padding from bottom
+    local totalButtonWidth = (BUTTON_WIDTH * 2) + BUTTON_SPACING
+    local startX = (GAME_WIDTH - totalButtonWidth) / 2
 
     -- Store button bounds for click detection
     game.buttons.shop._bounds = {
         x = startX,
         y = buttonY,
-        w = buttonWidth,
-        h = buttonHeight
+        w = BUTTON_WIDTH,
+        h = BUTTON_HEIGHT
     }
     game.buttons.workbench._bounds = {
-        x = startX + buttonWidth + buttonSpacing,
+        x = startX + BUTTON_WIDTH + BUTTON_SPACING,
         y = buttonY,
-        w = buttonWidth,
-        h = buttonHeight
+        w = BUTTON_WIDTH,
+        h = BUTTON_HEIGHT
     }
 
     -- Draw shop button
-    local shopButton = game.buttons.shop
-    local shopScale = 1 + (shopButton.hover and math.sin(game.hover_effect) * 0.1 or 0)
-    love.graphics.push()
-    love.graphics.translate(startX + buttonWidth/2, buttonY + buttonHeight/2)
-    love.graphics.scale(shopScale, shopScale)
-    love.graphics.translate(-buttonWidth/2, -buttonHeight/2)
-    
-    -- Draw button glow when hovered
-    if shopButton.hover then
-        for i = 1, 3 do
-            local glow_alpha = 0.1 - (i * 0.03)
-            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.rectangle("fill", -i*2, -i*2, buttonWidth + i*4, buttonHeight + i*4, 10 + i, 10 + i)
-        end
-    end
-    
-    love.graphics.setColor(shopButton.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-    love.graphics.rectangle("fill", 0, 0, buttonWidth, buttonHeight, 6, 6)
-    love.graphics.setColor(0.5, 0.5, 0.5)
-    love.graphics.rectangle("line", 0, 0, buttonWidth, buttonHeight, 6, 6)
-    
-    -- Draw text with shadow when hovered
-    if shopButton.hover then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.printf(shopButton.text, 2, 12, buttonWidth, "center")
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(shopButton.text, 0, 10, buttonWidth, "center")
-    love.graphics.pop()
+    drawButton(
+        game.buttons.shop, 
+        startX, 
+        buttonY, 
+        BUTTON_WIDTH, 
+        BUTTON_HEIGHT
+    )
 
     -- Draw workbench button
-    local workbenchButton = game.buttons.workbench
-    local workbenchScale = 1 + (workbenchButton.hover and math.sin(game.hover_effect) * 0.1 or 0)
-    love.graphics.push()
-    love.graphics.translate(startX + buttonWidth + buttonSpacing + buttonWidth/2, buttonY + buttonHeight/2)
-    love.graphics.scale(workbenchScale, workbenchScale)
-    love.graphics.translate(-buttonWidth/2, -buttonHeight/2)
-    
-    -- Draw button glow when hovered
-    if workbenchButton.hover then
-        for i = 1, 3 do
-            local glow_alpha = 0.1 - (i * 0.03)
-            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.rectangle("fill", -i*2, -i*2, buttonWidth + i*4, buttonHeight + i*4, 10 + i, 10 + i)
-        end
-    end
-    
-    love.graphics.setColor(workbenchButton.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-    love.graphics.rectangle("fill", 0, 0, buttonWidth, buttonHeight, 6, 6)
-    love.graphics.setColor(0.5, 0.5, 0.5)
-    love.graphics.rectangle("line", 0, 0, buttonWidth, buttonHeight, 6, 6)
-    
-    -- Draw text with shadow when hovered
-    if workbenchButton.hover then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.printf(workbenchButton.text, 2, 12, buttonWidth, "center")
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(workbenchButton.text, 0, 10, buttonWidth, "center")
-    love.graphics.pop()
+    drawButton(
+        game.buttons.workbench, 
+        startX + BUTTON_WIDTH + BUTTON_SPACING, 
+        buttonY, 
+        BUTTON_WIDTH, 
+        BUTTON_HEIGHT
+    )
     
     love.graphics.setScissor()
     
     -- Draw upgrades panel (always visible)
-    local panelWidth = 280
-    local panelX = 1280 - panelWidth
+    local panelX = 1280 - UPGRADES_PANEL_WIDTH
     love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.rectangle("fill", panelX, 0, panelWidth, 720)
+    love.graphics.rectangle("fill", panelX, 0, UPGRADES_PANEL_WIDTH, 720)
     
     -- Draw upgrades title
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(assets.fonts.bold)
-    love.graphics.printf("Upgrades", panelX, 20, panelWidth, "center")
+    love.graphics.printf("Upgrades", panelX, 20, UPGRADES_PANEL_WIDTH, "center")
     
     -- Draw upgrades
-    local upgradeSpacing = 20
-    local upgradeHeight = 80
     local startY = 80
     
     for i, upgrade in ipairs(upgrades.list) do
-        local y = startY + (i-1) * (upgradeHeight + upgradeSpacing)
+        local y = startY + (i-1) * (UPGRADE_HEIGHT + UPGRADE_SPACING)
         local x = panelX + 10
-        local width = panelWidth - 20
+        local width = UPGRADES_PANEL_WIDTH - 20
         
         -- Draw upgrade background
         local isSelected = i == upgrades.selected_index
         love.graphics.setColor(isSelected and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-        love.graphics.rectangle("fill", x, y, width, upgradeHeight, 6, 6)
+        love.graphics.rectangle("fill", x, y, width, UPGRADE_HEIGHT, 6, 6)
         
         -- Draw upgrade name
         love.graphics.setColor(1, 1, 1)
@@ -294,7 +297,7 @@ function game.draw()
         love.graphics.print(upgrade:getNextCost() .. " shells", x + 10, y + 45)
         
         -- Store bounds for click detection
-        upgrade._bounds = { x = x, y = y, w = width, h = upgradeHeight }
+        upgrade._bounds = { x = x, y = y, w = width, h = UPGRADE_HEIGHT }
     end
     
     shop.draw(game)
@@ -323,15 +326,15 @@ end
 function game.keypressed(key)
     if key == "escape" then 
         pause_menu.toggle()
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
     end
     if key == "q" then 
         game.toggle_shop()
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
     end
     if key == "e" then 
         game.toggle_workbench()
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
     end
     if key == "f3" then game.debug = not game.debug end
 end
@@ -343,20 +346,34 @@ function game.mousepressed(x, y, button)
     end
 
     -- Check upgrades panel clicks first
-    if x >= love.graphics.getWidth() - 280 then  -- 280 is upgrades panel width
+    if x >= love.graphics.getWidth() - UPGRADES_PANEL_WIDTH then
         upgrades.mousepressed(x, y, button, game)
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
         return
     end
 
     -- Check button clicks
     if button == 1 then
         if game.buttons.shop.hover then
-            love.audio.play(assets.sounds.click)
+            -- Play click sound with correct volume
+            local click = assets.sounds.click
+            if click then
+                local sound_instance = click:clone()
+                scene.applySfxVolume(sound_instance)
+                sound_instance:play()
+            end
+            
             game.toggle_shop()
             return
         elseif game.buttons.workbench.hover then
-            love.audio.play(assets.sounds.click)
+            -- Play click sound with correct volume
+            local click = assets.sounds.click
+            if click then
+                local sound_instance = click:clone()
+                scene.applySfxVolume(sound_instance)
+                sound_instance:play()
+            end
+            
             game.toggle_workbench()
             return
         end
@@ -365,27 +382,21 @@ function game.mousepressed(x, y, button)
     -- If a menu is open, still allow its mousepressed handler
     if game.shop_visible then
         shop.mousepressed(x, y, button, game)
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
         return
     elseif game.workbench_visible then
         workbench.mousepressed(x, y, button, game)
-        save.update(game.shells, shop.cosmetics)
+        saveGameState()
         return
     end
 
     -- Check gun clicks last, and only if we're in the game area
-    if button == 1 and x < love.graphics.getWidth() - 280 then
+    if button == 1 and x < love.graphics.getWidth() - UPGRADES_PANEL_WIDTH then
         if gun.isClicked(x, y) then
             local clicked = gun.shoot()
             if clicked then
                 game.shells = game.shells + 1
-                -- Save all relevant data after every click
-                save.update(
-                    game.shells,
-                    shop.cosmetics,
-                    workbench.equipped,
-                    workbench.equipped_weapon
-                )
+                saveGameState()
             end
         end
     end
