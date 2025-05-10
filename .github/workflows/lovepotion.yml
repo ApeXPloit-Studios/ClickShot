@@ -1,0 +1,72 @@
+name: Love Potion
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'dist/Love2D/ClickShot.love'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: ClickShot
+
+    steps:
+    - name: ⬇️ Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: 📦 Set up devkitPro and build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zip git wget curl python3-pip
+
+        # Install devkitPro pacman
+        wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-dkp.sh
+        chmod +x install-dkp.sh
+        sudo ./install-dkp.sh
+
+        echo "[dkp-libs]
+        Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
+
+        sudo dkp-pacman -Sy --noconfirm switch-dev 3ds-dev wiiu-dev
+
+        # Download lovebrew for Switch .nro creation
+        git clone https://github.com/Hydr8gon/lovebrew.git
+        cd lovebrew && make && sudo cp build/lovebrew /usr/local/bin && cd ..
+
+        # Optional: clone LovePotion tools per platform
+        git clone --depth=1 https://github.com/TurtleP/LovePotion-NX.git
+        git clone --depth=1 https://github.com/TurtleP/LovePotion-3DS.git
+        git clone --depth=1 https://github.com/TurtleP/LovePotion-WiiU.git
+
+    - name: 🛠️ Build for Switch
+      run: |
+        mkdir -p build/switch
+        cp dist/Love2D/ClickShot.love build/switch/boot.love
+
+        lovebrew -i build/switch/boot.love -o build/switch/ClickShot.nro --title "ClickShot" --author "ApeXPloit Studios"
+
+    - name: 🛠️ Build for 3DS
+      run: |
+        mkdir -p build/3ds
+        cp dist/Love2D/ClickShot.love build/3ds/boot.love
+
+        # Note: LovePotion-3DS does not have official .3dsx builder, would need to wrap it in a launcher
+        cp build/3ds/boot.love build/3ds/ClickShot.3dsx
+
+    - name: 🛠️ Build for Wii U
+      run: |
+        mkdir -p build/wiiu/ClickShot
+        cp dist/Love2D/ClickShot.love build/wiiu/ClickShot/boot.love
+        echo "<meta><name>ClickShot</name></meta>" > build/wiiu/ClickShot/meta.xml
+
+    - name: 📤 Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: LovePotion ROMs
+        path: |
+          build/switch/*.nro
+          build/3ds/*.3dsx
+          build/wiiu/**/*
