@@ -3,25 +3,43 @@ name: Love Potion Builds
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'dist/Love2D/ClickShot.love'
+    branches: [ main ]
 
 jobs:
-  setup:
+  build-love2d:
     runs-on: ubuntu-latest
-    outputs:
-      timestamp: ${{ steps.timestamp.outputs.timestamp }}
     steps:
-      - name: Get timestamp
-        id: timestamp
-        run: echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
 
-  switch:
-    needs: setup
+      - name: Create Love2D Package
+        run: |
+          mkdir -p dist/Love2D
+          cd src
+          zip -r ../dist/Love2D/ClickShot.love ./*
+          cd ../dist/Love2D
+          zip ClickShot-love2d.zip ClickShot.love
+
+      - name: Upload Love2D Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D/ClickShot-love2d.zip
+
+  build-switch:
+    needs: build-love2d
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Download Love2D Package
+        uses: actions/download-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D
 
       - name: Set up devkitPro + LovePotion for Switch
         run: |
@@ -38,22 +56,31 @@ jobs:
 
       - name: Build for Switch
         run: |
-          mkdir -p build/switch
-          cp dist/Love2D/ClickShot.love build/switch/boot.love
-          lovebrew -i build/switch/boot.love -o build/switch/ClickShot.nro --title "ClickShot" --author "ApeXPloit Studios"
+          mkdir -p dist/Switch
+          cd dist/Love2D
+          unzip ClickShot-love2d.zip
+          cd ../..
+          lovebrew -i dist/Love2D/ClickShot.love -o dist/Switch/ClickShot.nro --title "ClickShot" --author "ApeXPloit Studios"
 
-      - name: Upload Switch Artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Switch Build
+        uses: actions/upload-artifact@v4
         with:
-          name: ClickShot_Switch
-          path: build/switch/*.nro
+          name: clickshot-switch
+          path: dist/Switch/ClickShot.nro
 
-  3ds:
-    needs: setup
+  build-3ds:
+    needs: build-love2d
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Download Love2D Package
+        uses: actions/download-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D
 
       - name: Set up devkitPro + LovePotion for 3DS
         run: |
@@ -68,22 +95,32 @@ jobs:
 
       - name: Build for 3DS
         run: |
-          mkdir -p build/3ds
-          cp dist/Love2D/ClickShot.love build/3ds/boot.love
-          cp build/3ds/boot.love build/3ds/ClickShot.3dsx
+          mkdir -p dist/3DS
+          cd dist/Love2D
+          unzip ClickShot-love2d.zip
+          cd ../..
+          cp dist/Love2D/ClickShot.love dist/3DS/boot.love
+          cp dist/3DS/boot.love dist/3DS/ClickShot.3dsx
 
-      - name: Upload 3DS Artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload 3DS Build
+        uses: actions/upload-artifact@v4
         with:
-          name: ClickShot_3DS
-          path: build/3ds/*.3dsx
+          name: clickshot-3ds
+          path: dist/3DS/ClickShot.3dsx
 
-  wiiu:
-    needs: setup
+  build-wiiu:
+    needs: build-love2d
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Download Love2D Package
+        uses: actions/download-artifact@v4
+        with:
+          name: clickshot-love2d
+          path: dist/Love2D
 
       - name: Set up devkitPro + LovePotion for Wii U
         run: |
@@ -98,12 +135,15 @@ jobs:
 
       - name: Build for Wii U
         run: |
-          mkdir -p build/wiiu/ClickShot
-          cp dist/Love2D/ClickShot.love build/wiiu/ClickShot/boot.love
-          echo "<meta><name>ClickShot</name></meta>" > build/wiiu/ClickShot/meta.xml
+          mkdir -p dist/WiiU/ClickShot
+          cd dist/Love2D
+          unzip ClickShot-love2d.zip
+          cd ../..
+          cp dist/Love2D/ClickShot.love dist/WiiU/ClickShot/boot.love
+          echo "<meta><name>ClickShot</name></meta>" > dist/WiiU/ClickShot/meta.xml
 
-      - name: Upload Wii U Artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Wii U Build
+        uses: actions/upload-artifact@v4
         with:
-          name: ClickShot_WiiU
-          path: build/wiiu/**
+          name: clickshot-wiiu
+          path: dist/WiiU/**
