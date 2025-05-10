@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ClickShot
+Comment=A LÖVE2D Clicker Game
+Exec=love %f
+Icon=ClickShot
+Terminal=false
+Type=Application
+Categories=Game;
+MimeType=application/x-love-game;
+StartupWMClass=ClickShot 
