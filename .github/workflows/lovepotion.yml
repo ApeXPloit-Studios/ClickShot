@@ -1,4 +1,4 @@
-name: Love Potion
+name: Love Potion Builds
 
 on:
   workflow_dispatch:
@@ -7,66 +7,103 @@ on:
       - 'dist/Love2D/ClickShot.love'
 
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-latest
-
-    env:
-      PROJECT_NAME: ClickShot
-
+    outputs:
+      timestamp: ${{ steps.timestamp.outputs.timestamp }}
     steps:
-    - name: ⬇️ Checkout Repo
-      uses: actions/checkout@v3
+      - name: Get timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
 
-    - name: 📦 Set up devkitPro and build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y zip git wget curl python3-pip
+  switch:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-        # Install devkitPro pacman
-        wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-dkp.sh
-        chmod +x install-dkp.sh
-        sudo ./install-dkp.sh
+      - name: Set up devkitPro + LovePotion for Switch
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip git wget curl python3-pip
+          wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-dkp.sh
+          chmod +x install-dkp.sh
+          sudo ./install-dkp.sh
+          echo "[dkp-libs]
+          Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
+          sudo dkp-pacman -Sy --noconfirm switch-dev
+          git clone https://github.com/Hydr8gon/lovebrew.git
+          cd lovebrew && make && sudo cp build/lovebrew /usr/local/bin && cd ..
 
-        echo "[dkp-libs]
-        Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
+      - name: Build for Switch
+        run: |
+          mkdir -p build/switch
+          cp dist/Love2D/ClickShot.love build/switch/boot.love
+          lovebrew -i build/switch/boot.love -o build/switch/ClickShot.nro --title "ClickShot" --author "ApeXPloit Studios"
 
-        sudo dkp-pacman -Sy --noconfirm switch-dev 3ds-dev wiiu-dev
+      - name: Upload Switch Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ClickShot_Switch
+          path: build/switch/*.nro
 
-        # Download lovebrew for Switch .nro creation
-        git clone https://github.com/Hydr8gon/lovebrew.git
-        cd lovebrew && make && sudo cp build/lovebrew /usr/local/bin && cd ..
+  3ds:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-        # Optional: clone LovePotion tools per platform
-        git clone --depth=1 https://github.com/TurtleP/LovePotion-NX.git
-        git clone --depth=1 https://github.com/TurtleP/LovePotion-3DS.git
-        git clone --depth=1 https://github.com/TurtleP/LovePotion-WiiU.git
+      - name: Set up devkitPro + LovePotion for 3DS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip git wget curl python3-pip
+          wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-dkp.sh
+          chmod +x install-dkp.sh
+          sudo ./install-dkp.sh
+          echo "[dkp-libs]
+          Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
+          sudo dkp-pacman -Sy --noconfirm 3ds-dev
 
-    - name: 🛠️ Build for Switch
-      run: |
-        mkdir -p build/switch
-        cp dist/Love2D/ClickShot.love build/switch/boot.love
+      - name: Build for 3DS
+        run: |
+          mkdir -p build/3ds
+          cp dist/Love2D/ClickShot.love build/3ds/boot.love
+          cp build/3ds/boot.love build/3ds/ClickShot.3dsx
 
-        lovebrew -i build/switch/boot.love -o build/switch/ClickShot.nro --title "ClickShot" --author "ApeXPloit Studios"
+      - name: Upload 3DS Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ClickShot_3DS
+          path: build/3ds/*.3dsx
 
-    - name: 🛠️ Build for 3DS
-      run: |
-        mkdir -p build/3ds
-        cp dist/Love2D/ClickShot.love build/3ds/boot.love
+  wiiu:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-        # Note: LovePotion-3DS does not have official .3dsx builder, would need to wrap it in a launcher
-        cp build/3ds/boot.love build/3ds/ClickShot.3dsx
+      - name: Set up devkitPro + LovePotion for Wii U
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip git wget curl python3-pip
+          wget https://apt.devkitpro.org/install-devkitpro-pacman -O install-dkp.sh
+          chmod +x install-dkp.sh
+          sudo ./install-dkp.sh
+          echo "[dkp-libs]
+          Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
+          sudo dkp-pacman -Sy --noconfirm wiiu-dev
 
-    - name: 🛠️ Build for Wii U
-      run: |
-        mkdir -p build/wiiu/ClickShot
-        cp dist/Love2D/ClickShot.love build/wiiu/ClickShot/boot.love
-        echo "<meta><name>ClickShot</name></meta>" > build/wiiu/ClickShot/meta.xml
+      - name: Build for Wii U
+        run: |
+          mkdir -p build/wiiu/ClickShot
+          cp dist/Love2D/ClickShot.love build/wiiu/ClickShot/boot.love
+          echo "<meta><name>ClickShot</name></meta>" > build/wiiu/ClickShot/meta.xml
 
-    - name: 📤 Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: LovePotion ROMs
-        path: |
-          build/switch/*.nro
-          build/3ds/*.3dsx
-          build/wiiu/**/*
+      - name: Upload Wii U Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ClickShot_WiiU
+          path: build/wiiu/**
