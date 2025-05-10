@@ -132,18 +132,46 @@ jobs:
           echo "[dkp-libs]
           Server = https://downloads.devkitpro.org/packages" | sudo tee -a /etc/pacman.conf
           sudo dkp-pacman -Sy --noconfirm wiiu-dev
+          git clone https://github.com/TurtleP/LovePotion.git
+          cd LovePotion
+          make wiiu
+          cd ..
 
       - name: Build for Wii U
         run: |
-          mkdir -p dist/WiiU/ClickShot
+          # Create proper Cemu folder structure
+          mkdir -p dist/WiiU/ClickShot/{code,content,meta}
+          
+          # Copy the .love file to content
           cd dist/Love2D
           unzip ClickShot-love2d.zip
           cd ../..
-          cp dist/Love2D/ClickShot.love dist/WiiU/ClickShot/boot.love
-          echo "<meta><name>ClickShot</name></meta>" > dist/WiiU/ClickShot/meta.xml
+          cp dist/Love2D/ClickShot.love dist/WiiU/ClickShot/content/game.love
+          
+          # Copy the compiled RPX to code
+          cp LovePotion/build/wiiu/main.rpx dist/WiiU/ClickShot/code/
+          
+          # Create proper meta.xml
+          cat > dist/WiiU/ClickShot/meta/meta.xml << EOL
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <menu>
+            <id>00050000101C5A00</id>
+            <version>1.0.0</version>
+            <type>1</type>
+            <os_version>0x000500101000000A</os_version>
+            <title>
+              <id>00050000101C5A00</id>
+              <version>1.0.0</version>
+              <type>1</type>
+              <name>ClickShot</name>
+              <author>ApeXPloit Studios</author>
+              <path>code/main.rpx</path>
+            </title>
+          </menu>
+          EOL
 
       - name: Upload Wii U Build
         uses: actions/upload-artifact@v4
         with:
           name: clickshot-wiiu
-          path: dist/WiiU/**
+          path: dist/WiiU/ClickShot/**
