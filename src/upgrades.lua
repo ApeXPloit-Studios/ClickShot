@@ -1,4 +1,5 @@
 local assets = require("assets")
+local ui = require("ui")
 local upgrades = {
     list = {},
     selected_index = 1,
@@ -28,7 +29,8 @@ local function createUpgrade(name, base_cost, cps, effect_fn)
     
     -- Set the effect function or use a default
     upgrade.effect = effect_fn or function(self, game)
-            game.auto_cps = game.auto_cps + (self.count * self.cps)
+            -- Individual effects are now just for special behaviors
+            -- auto_cps is calculated collectively in applyAllEffects
         end
     
     return upgrade
@@ -86,6 +88,22 @@ function upgrades.navigate(direction)
     upgrades.navigation_cooldown = upgrades.navigation_cooldown_time
 end
 
+-- Recalculate and apply all upgrade effects at once
+function upgrades.applyAllEffects(game)
+    -- Reset auto_cps
+    game.auto_cps = 0
+    
+    -- Apply base effect of each upgrade
+    for _, upgrade in ipairs(upgrades.list) do
+        game.auto_cps = game.auto_cps + (upgrade.count * upgrade.cps)
+        
+        -- Apply any special effects
+        if upgrade.effect then
+            upgrade:effect(game)
+        end
+    end
+end
+
 -- Buy an upgrade
 function upgrades.buyUpgrade(index, game)
     if index < 1 or index > #upgrades.list then
@@ -98,7 +116,7 @@ function upgrades.buyUpgrade(index, game)
     if game.shells >= cost then
         game.shells = game.shells - cost
         upgrade.count = upgrade.count + 1
-        upgrade:effect(game)
+        upgrades.applyAllEffects(game)
         return true
     end
     
@@ -115,9 +133,8 @@ function upgrades.update(dt, game)
     -- Update hover states
     local mx, my = love.mouse.getPosition()
     for _, upgrade in ipairs(upgrades.list) do
-        local b = upgrade._bounds
-        if b then
-            upgrade.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
+        if upgrade._bounds then
+            ui.updateButtonHover(upgrade, mx, my)
         end
     end
 
@@ -133,56 +150,10 @@ function upgrades.mousepressed(x, y, button, game)
 
     for i, upgrade in ipairs(upgrades.list) do
         local b = upgrade._bounds
-        if b and x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
+        if b and ui.pointInRect(x, y, b) then
             upgrades.buyUpgrade(i, game)
             break
         end
-    end
-end
-
--- Draw function (not used in the game.lua implementation, kept for reference)
-function upgrades.draw()
-    local screenW = love.graphics.getWidth()
-    local panelW = 200
-    local x = screenW - panelW
-    local y = 0
-    local h = love.graphics.getHeight()
-    local spacing = 90
-    local startY = y + 50
-    local buttonH = 80
-
-    -- Draw panel background
-    love.graphics.setColor(0, 0, 0, 0.9)
-    love.graphics.rectangle("fill", x, y, panelW, h)
-
-    -- Draw title
-    love.graphics.setFont(assets.fonts.bold)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Upgrades", x, y + 10, panelW, "center")
-
-    -- Draw upgrades
-    for i, upgrade in ipairs(upgrades.list) do
-        local bx, by, bw, bh = x + 10, startY + (i-1) * spacing, panelW - 20, buttonH
-        upgrade._bounds = { x = bx, y = by, w = bw, h = bh }
-
-        -- Draw upgrade background
-        local isSelected = i == upgrades.selected_index
-        love.graphics.setColor(isSelected and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-        love.graphics.rectangle("fill", bx, by, bw, bh, 6, 6)
-
-        -- Draw upgrade name
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(assets.fonts.bold)
-        love.graphics.print(upgrade.name, bx + 10, by + 15)
-        
-        -- Draw count on the right side
-        local countStr = tostring(upgrade.count)
-        local countW = assets.fonts.bold:getWidth(countStr)
-        love.graphics.print(countStr, bx + bw - countW - 10, by + 15)
-        
-        -- Draw cost on a new line
-        love.graphics.setColor(1, 1, 0)
-        love.graphics.print(upgrade:getNextCost() .. " shells", bx + 10, by + 45)
     end
 end
 

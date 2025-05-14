@@ -2,9 +2,9 @@ local assets = require("assets")
 local gun = require("gun")
 local weapons = require("weapons")
 local save = require("save")
+local ui = require("ui")
 local workbench = {}
 
-workbench.visible = false
 workbench.equipped_weapon = "pistol"  -- Default weapon
 workbench.expanded_weapon = nil  -- Currently expanded weapon dropdown
 
@@ -42,13 +42,6 @@ function workbench.load()
     end
 end
 
-function workbench.toggle()
-    workbench.visible = not workbench.visible
-    if not workbench.visible then
-        workbench.expanded_weapon = nil
-    end
-end
-
 function workbench.update(dt, game)
     if not game.workbench_visible then return end
     
@@ -57,8 +50,7 @@ function workbench.update(dt, game)
     -- Update weapon button hover states
     for weapon, data in pairs(weapons.getAll()) do
         if data.owned and data._bounds then
-            data.hover = mx >= data._bounds.x and mx <= data._bounds.x + data._bounds.w and 
-                        my >= data._bounds.y and my <= data._bounds.y + data._bounds.h
+            ui.updateButtonHover(data, mx, my)
         end
     end
     
@@ -68,8 +60,7 @@ function workbench.update(dt, game)
         if weapon_data then
             for type, v in pairs(weapon_data.cosmetics) do
                 if v._bounds then
-                    v.hover = mx >= v._bounds.x and mx <= v._bounds.x + v._bounds.w and 
-                             my >= v._bounds.y and my <= v._bounds.y + v._bounds.h
+                    ui.updateButtonHover(v, mx, my)
                 end
             end
         end
@@ -136,8 +127,7 @@ function workbench.mousepressed(x, y, button, game)
     -- Check weapon selection
     for weapon, data in pairs(weapons.getAll()) do
         if data.owned and data._bounds then
-            if x >= data._bounds.x and x <= data._bounds.x + data._bounds.w and 
-               y >= data._bounds.y and y <= data._bounds.y + data._bounds.h then
+            if ui.pointInRect(x, y, data._bounds) then
                 if workbench.expanded_weapon == weapon then
                     workbench.expanded_weapon = nil
                 else
@@ -156,8 +146,7 @@ function workbench.mousepressed(x, y, button, game)
         local weapon_data = weapons.getWeapon(workbench.expanded_weapon)
         if weapon_data then
             for type, v in pairs(weapon_data.cosmetics) do
-                if v._bounds and x >= v._bounds.x and x <= v._bounds.x + v._bounds.w and 
-                   y >= v._bounds.y and y <= v._bounds.y + v._bounds.h then
+                if v._bounds and ui.pointInRect(x, y, v._bounds) then
                     if v.owned then
                         workbench.equipped[workbench.expanded_weapon][type] = not workbench.equipped[workbench.expanded_weapon][type]
                         workbench.updateGunSprite()

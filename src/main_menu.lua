@@ -2,12 +2,12 @@ local assets = require("assets")
 local scene = require("scene")
 local background_effect = require("background_effect")
 local settings = require("settings")
+local ui = require("ui")
 
 local main_menu = {
     time = 0,
     title_scale = 1,
     title_rotation = 0,
-    hover_effect = 0,
     button_sound_played = false,
     discord_button = {
         x = 0,
@@ -15,8 +15,7 @@ local main_menu = {
         size = 48,  -- Size of the Discord button
         hover = false
     },
-    version = "1.1.0-alpha",  -- Current version
-    mute_hover = false
+    version = "1.1.0-alpha"  -- Current version
 }
 
 local buttons = {
@@ -77,11 +76,8 @@ function main_menu.update(dt)
     main_menu.title_scale = 1 + 0.1 * math.sin(main_menu.time * 2)
     main_menu.title_rotation = 0.05 * math.sin(main_menu.time)
     
-    -- Update hover effect
-    main_menu.hover_effect = main_menu.hover_effect + dt * 2
-    if main_menu.hover_effect > math.pi * 2 then
-        main_menu.hover_effect = 0
-    end
+    -- Update UI hover effect
+    ui.update(dt)
     
     -- Update button hover states
     local mx, my = love.mouse.getPosition()
@@ -89,8 +85,11 @@ function main_menu.update(dt)
     
     -- Update main buttons
     for _, b in ipairs(buttons) do
+        -- Set _bounds for each button for UI module to work
+        b._bounds = { x = b.x, y = b.y, w = b.w, h = b.h }
+        
         local was_hover = b.hover
-        b.hover = mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h
+        ui.updateButtonHover(b, mx, my)
         
         if b.hover and not was_hover then
             hover_found = true
@@ -99,15 +98,18 @@ function main_menu.update(dt)
     
     -- Update Discord button hover
     local db = main_menu.discord_button
+    db._bounds = { x = db.x, y = db.y, w = db.size, h = db.size }
+    
     local was_hover = db.hover
-    db.hover = mx >= db.x and mx <= db.x + db.size and my >= db.y and my <= db.y + db.size
+    ui.updateButtonHover(db, mx, my)
     
     if db.hover and not was_hover then
         hover_found = true
     end
     
-    -- Mute button hover
-    main_menu.mute_hover = mx >= 20 and mx <= 100 and my >= 20 and my <= 52
+    -- Update mute button hover
+    ui.updateButtonHover(ui.mute_button, mx, my)
+    ui.updateMuteButton(scene)
     
     -- Reset button sound flag when no buttons are hovered
     if not hover_found then
@@ -151,76 +153,31 @@ function main_menu.draw()
     -- Draw main buttons
     love.graphics.setFont(assets.fonts.bold)  -- Set back to regular bold font for buttons
     for _, b in ipairs(buttons) do
-        -- Button background with hover effect
-        local hover_scale = 1 + (b.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
-        local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
-        
-        love.graphics.push()
-        love.graphics.translate(b.x + b.w/2, b.y + b.h/2)
-        love.graphics.scale(hover_scale, hover_scale)
-        love.graphics.translate(-b.w/2, -b.h/2)
-        
-        -- Draw button glow when hovered
-        if b.hover then
-            for i = 1, 3 do
-                local glow_alpha = 0.1 - (i * 0.03)
-                love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-                love.graphics.rectangle("fill", -i*2, -i*2, b.w + i*4, b.h + i*4, 10 + i, 10 + i)
-            end
-        end
-        
-        -- Draw button background
-        love.graphics.setColor(hover_color[1], hover_color[2], hover_color[3])
-        love.graphics.rectangle("fill", 0, 0, b.w, b.h, 10, 10)
-        
-        -- Draw button border
-        love.graphics.setColor(0.5, 0.5, 0.5)
-        love.graphics.rectangle("line", 0, 0, b.w, b.h, 10, 10)
-        
-        -- Draw button text with shadow
-        if b.hover then
-            love.graphics.setColor(0, 0, 0, 0.5)
-            love.graphics.print(b.text, (b.w - assets.fonts.bold:getWidth(b.text)) / 2 + 2, 
-                              (b.h - assets.fonts.bold:getHeight()) / 2 + 2)
-        end
-        
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.print(b.text, (b.w - assets.fonts.bold:getWidth(b.text)) / 2, 
-                          (b.h - assets.fonts.bold:getHeight()) / 2)
-        
-        love.graphics.pop()
+        ui.drawButton(b, b.x, b.y, b.w, b.h)
     end
     
-    -- Draw mute button (top left)
+    -- Draw mute button
     love.graphics.setFont(assets.fonts.bold)
-    local mute_text = scene.isMuted() and "Unmute" or "Mute"
-    local color = main_menu.mute_hover and {0.5, 0.5, 1} or {0.2, 0.2, 0.2}
-    love.graphics.setColor(color)
-    love.graphics.rectangle("fill", 20, 20, 80, 32, 8, 8)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(mute_text, 20, 26, 80, "center")
+    ui.drawMuteButton(assets)
     
     -- Draw Discord button
     local db = main_menu.discord_button
-    local hover_scale = 1 + (db.hover and math.sin(main_menu.hover_effect) * 0.1 or 0)
     
+    -- Special case for circular Discord button
     love.graphics.push()
-    love.graphics.translate(db.x + db.size/2, db.y + db.size/2)
-    love.graphics.scale(hover_scale, hover_scale)
-    love.graphics.translate(-db.size/2, -db.size/2)
     
     -- Draw button glow when hovered
     if db.hover then
         for i = 1, 3 do
             local glow_alpha = 0.1 - (i * 0.03)
             love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.circle("fill", db.size/2, db.size/2, db.size/2 + i*2)
+            love.graphics.circle("fill", db.x + db.size/2, db.y + db.size/2, db.size/2 + i*2)
         end
     end
     
     -- Draw Discord icon
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(main_menu.discord_icon, 0, 0, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
+    love.graphics.draw(main_menu.discord_icon, db.x, db.y, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
     
     love.graphics.pop()
 
@@ -234,15 +191,13 @@ end
 function main_menu.mousepressed(x, y, button)
     if button == 1 then
         -- Mute button
-        if x >= 20 and x <= 100 and y >= 20 and y <= 52 then
-            -- Use scene's centralized mute toggle function
-            scene.toggleMute()
+        if ui.handleMuteButtonClick(x, y, button, scene) then
             return
         end
         
         -- Check Discord button
         local db = main_menu.discord_button
-        if x >= db.x and x <= db.x + db.size and y >= db.y and y <= db.y + db.size then
+        if db.hover then
             love.system.openURL("https://discord.gg/PpWupysxU8")
             return
         end
@@ -250,12 +205,9 @@ function main_menu.mousepressed(x, y, button)
         -- Check other buttons
         for _, b in ipairs(buttons) do
             if b.hover then
-                -- Play click sound with correct volume
-                local click = assets.sounds.click
-                if click then
-                    local sound_instance = click:clone()
-                    scene.applySfxVolume(sound_instance)
-                    sound_instance:play()
+                -- Play click sound
+                if assets.sounds.click then
+                    scene.playSound(assets.sounds.click)
                 end
                 
                 b.action()

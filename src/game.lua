@@ -9,6 +9,7 @@ local background = require("background")
 local game_background = require("game_background")
 local scene = require("scene")
 local settings = require("settings")
+local ui = require("ui")
 
 -- Constants
 local GAME_WIDTH = 1000
@@ -26,7 +27,9 @@ local game = {
     gamepad = nil,
     selected_button = 1,  -- 1 = gun, 2 = shop, 3 = workbench
     button_cooldown = 0,
-    hover_effect = 0,
+    save_cooldown = 0,  -- Cooldown timer for saves
+    save_interval = 2,  -- seconds after every save
+    save_pending = false,  -- indicate a save is needed
     buttons = {
         shop = { text = "Shop", hover = false },
         workbench = { text = "Workbench", hover = false }
@@ -62,10 +65,12 @@ function game.load()
                 -- Clamp to [0, 100000] to prevent corruption
                 count = math.max(0, math.min(100000, math.floor(count)))
                 upgrade.count = count
-                upgrade:effect(game)  -- Apply the upgrade effect
             end
         end
     end
+    
+    -- Apply all upgrade effects
+    upgrades.applyAllEffects(game)
 
     -- Initialize gamepad
     local joysticks = love.joystick.getJoysticks()
@@ -76,12 +81,7 @@ end
 
 -- Helper function to save game state
 local function saveGameState()
-    save.update(
-        game.shells, 
-        shop.cosmetics,
-        workbench.equipped,
-        workbench.equipped_weapon
-    )
+    game.save_pending = true
 end
 
 function game.update(dt)
@@ -90,30 +90,27 @@ function game.update(dt)
         return
     end
 
+    -- Update save cooldown and perform save if needed
+    if game.save_cooldown > 0 then
+        game.save_cooldown = game.save_cooldown - dt
+    elseif game.save_pending then
+        save.update(
+            game.shells, 
+            shop.cosmetics,
+            workbench.equipped,
+            workbench.equipped_weapon
+        )
+        game.save_pending = false
+        game.save_cooldown = game.save_interval
+    end
+
     -- Update button cooldown
     if game.button_cooldown > 0 then
         game.button_cooldown = game.button_cooldown - dt
     end
-
-    -- Update hover effect
-    game.hover_effect = game.hover_effect + dt * 2
-    if game.hover_effect > math.pi * 2 then
-        game.hover_effect = 0
-    end
-
-    -- Update button hover states
     local mx, my = love.mouse.getPosition()
     for _, button in pairs(game.buttons) do
-        if button._bounds then
-            local was_hover = button.hover
-            button.hover = mx >= button._bounds.x and mx <= button._bounds.x + button._bounds.w and
-                          my >= button._bounds.y and my <= button._bounds.y + button._bounds.h
-            
-            -- Could add hover sound here
-            if button.hover and not was_hover then
-                -- love.audio.play(assets.sounds.hover)
-            end
-        end
+        ui.updateButtonHover(button, mx, my)
     end
 
     -- Check for gamepad input
@@ -166,39 +163,6 @@ function game.update(dt)
     game_background.update(dt, game.shells)
 end
 
--- Helper function to draw a button
-local function drawButton(button, x, y, width, height)
-    local buttonScale = 1 + (button.hover and math.sin(game.hover_effect) * 0.1 or 0)
-    
-    love.graphics.push()
-    love.graphics.translate(x + width/2, y + height/2)
-    love.graphics.scale(buttonScale, buttonScale)
-    love.graphics.translate(-width/2, -height/2)
-    
-    -- Draw button glow when hovered
-    if button.hover then
-        for i = 1, 3 do
-            local glow_alpha = 0.1 - (i * 0.03)
-            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.rectangle("fill", -i*2, -i*2, width + i*4, height + i*4, 10 + i, 10 + i)
-        end
-    end
-    
-    love.graphics.setColor(button.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-    love.graphics.rectangle("fill", 0, 0, width, height, 6, 6)
-    love.graphics.setColor(0.5, 0.5, 0.5)
-    love.graphics.rectangle("line", 0, 0, width, height, 6, 6)
-    
-    -- Draw text with shadow when hovered
-    if button.hover then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.printf(button.text, 2, 12, width, "center")
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(button.text, 0, 10, width, "center")
-    love.graphics.pop()
-end
-
 function game.draw()
     -- Draw game area (slightly smaller to accommodate upgrades panel)
     love.graphics.setScissor(0, 0, GAME_WIDTH, 720)
@@ -241,7 +205,7 @@ function game.draw()
     }
 
     -- Draw shop button
-    drawButton(
+    ui.drawButton(
         game.buttons.shop, 
         startX, 
         buttonY, 
@@ -250,7 +214,7 @@ function game.draw()
     )
 
     -- Draw workbench button
-    drawButton(
+    ui.drawButton(
         game.buttons.workbench, 
         startX + BUTTON_WIDTH + BUTTON_SPACING, 
         buttonY, 
@@ -358,9 +322,7 @@ function game.mousepressed(x, y, button)
             -- Play click sound with correct volume
             local click = assets.sounds.click
             if click then
-                local sound_instance = click:clone()
-                scene.applySfxVolume(sound_instance)
-                sound_instance:play()
+                scene.playSound(click)
             end
             
             game.toggle_shop()
@@ -369,9 +331,7 @@ function game.mousepressed(x, y, button)
             -- Play click sound with correct volume
             local click = assets.sounds.click
             if click then
-                local sound_instance = click:clone()
-                scene.applySfxVolume(sound_instance)
-                sound_instance:play()
+                scene.playSound(click)
             end
             
             game.toggle_workbench()

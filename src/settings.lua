@@ -1,16 +1,16 @@
 local assets = require("assets")
 local scene = require("scene")  -- Import scene module for audio handling
+local ui = require("ui")
 
 local settings = {
     visible = false,
     time = 0,
     title_scale = 1,
-    mute_hover = false,
     sliders = {
         music = { value = 1.0, dragging = false },
         sfx = { value = 1.0, dragging = false }
     },
-    back_button = { hover = false, _bounds = nil }
+    back_button = { text = "Back", hover = false, _bounds = nil }
 }
 
 -- Apply volume settings
@@ -76,21 +76,20 @@ function settings.toggle()
     end
 end
 
-function settings.toggleMute()
-    -- Use scene's centralized mute toggle function
-    scene.toggleMute()
-end
-
 function settings.update(dt)
     if not settings.visible then return end
     
     settings.time = settings.time + dt
     settings.title_scale = 1 + 0.05 * math.sin(settings.time * 2)
     
+    -- Update UI hover effect
+    ui.update(dt)
+    
     local mx, my = love.mouse.getPosition()
     
     -- Update mute button hover
-    settings.mute_hover = mx >= 20 and mx <= 100 and my >= 20 and my <= 52
+    ui.updateButtonHover(ui.mute_button, mx, my)
+    ui.updateMuteButton(scene)
     
     -- Update slider dragging
     for name, slider in pairs(settings.sliders) do
@@ -104,11 +103,7 @@ function settings.update(dt)
     end
     
     -- Update back button hover state
-    settings.back_button.hover = false
-    local b = settings.back_button._bounds
-    if b and mx >= b.x and mx <= b.x + b.w and my >= b.y and my <= b.y + b.h then
-        settings.back_button.hover = true
-    end
+    ui.updateButtonHover(settings.back_button, mx, my)
 end
 
 function settings.draw()
@@ -144,14 +139,8 @@ function settings.draw()
     love.graphics.print(title, 0, 0)
     love.graphics.pop()
     
-    -- Draw mute button (top left corner, matching main_menu style)
-    love.graphics.setFont(assets.fonts.bold)
-    local mute_text = scene.isMuted() and "Unmute" or "Mute"
-    local color = settings.mute_hover and {0.5, 0.5, 1} or {0.2, 0.2, 0.2}
-    love.graphics.setColor(color)
-    love.graphics.rectangle("fill", 20, 20, 80, 32, 8, 8)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(mute_text, 20, 26, 80, "center")
+    -- Draw mute button with UI module
+    ui.drawMuteButton(assets)
 
     -- Draw sliders
     love.graphics.setFont(assets.fonts.regular)
@@ -183,24 +172,13 @@ function settings.draw()
         end
     end
     
-    -- Draw Back button
-    local b = settings.back_button._bounds
-    if b then
-        local hover = settings.back_button.hover
-        local color = hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
-        
-        love.graphics.setColor(color)
-        love.graphics.rectangle("fill", b.x, b.y, b.w, b.h, 8, 8)
-        love.graphics.setColor(0.5, 0.5, 0.5)
-        love.graphics.rectangle("line", b.x, b.y, b.w, b.h, 8, 8)
-        
-        if hover then
-            love.graphics.setColor(0, 0, 0, 0.5)
-            love.graphics.printf("Back", b.x + 2, b.y + 10, b.w, "center")
-        end
-        
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Back", b.x, b.y + 8, b.w, "center")
+    -- Draw Back button with UI module
+    if settings.back_button._bounds then
+        ui.drawButton(settings.back_button, 
+                     settings.back_button._bounds.x, 
+                     settings.back_button._bounds.y, 
+                     settings.back_button._bounds.w, 
+                     settings.back_button._bounds.h)
     end
 end
 
@@ -208,8 +186,7 @@ function settings.mousepressed(x, y, button)
     if not settings.visible or button ~= 1 then return end
 
     -- Check mute button
-    if x >= 20 and x <= 100 and y >= 20 and y <= 52 then
-        settings.toggleMute()
+    if ui.handleMuteButtonClick(x, y, button, scene) then
         return
     end
     

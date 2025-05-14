@@ -54,8 +54,8 @@ function scene.load()
     -- Set initial volume
     if scene.menu_music then
         scene.menu_music:setVolume(scene.audio.muted and 0 or scene.audio.music_volume)
-    scene.menu_music:play()
-end
+        scene.menu_music:play()
+    end
 
     if scene.game_music then
         scene.game_music:setVolume(scene.audio.muted and 0 or scene.audio.music_volume)
@@ -139,6 +139,8 @@ function scene.updateMusic()
         
         -- Start menu music if not playing
         if scene.menu_music and not scene.menu_music:isPlaying() then
+            -- Reset the music to the beginning before playing
+            scene.menu_music:seek(0)
             scene.menu_music:play()
         end
     elseif scene.current == "game" then
@@ -149,6 +151,8 @@ function scene.updateMusic()
         
         -- Start game music if not playing
         if scene.game_music and not scene.game_music:isPlaying() then
+            -- Reset the music to the beginning before playing
+            scene.game_music:seek(0)
             scene.game_music:play()
         end
     end
@@ -204,14 +208,15 @@ function scene.applySfxVolume(sound)
     return sound
 end
 
--- Legacy function for backward compatibility
-function scene.setVolume(volume)
-    scene.setMusicVolume(volume)
-end
-
--- Legacy function for backward compatibility  
-function scene.applyMuteState()
-    scene.applyAudioState()
+-- Play a sound effect with proper volume
+function scene.playSound(sound)
+    if not sound then return end
+    
+    local sound_instance = sound:clone()
+    scene.applySfxVolume(sound_instance)
+    sound_instance:play()
+    
+    return sound_instance
 end
 
 return scene

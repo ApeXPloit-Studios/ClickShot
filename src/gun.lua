@@ -137,10 +137,7 @@ function gun.shoot()
     -- Play the click sound with the correct volume
     local click = assets.sounds.click
     if click then
-        -- Use a copy of the sound to avoid affecting the original
-        local sound_instance = click:clone()
-        scene.applySfxVolume(sound_instance)
-        sound_instance:play()
+        scene.playSound(click)
     end
     
     return true

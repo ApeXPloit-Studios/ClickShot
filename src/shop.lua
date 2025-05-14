@@ -1,12 +1,7 @@
 local assets = require("assets")
 local weapons = require("weapons")
+local ui = require("ui")
 local shop = {}
-
-shop.visible = false
-
-function shop.toggle()
-    shop.visible = not shop.visible
-end
 
 function shop.update(dt, game)
     if not game.shop_visible then return end
@@ -16,8 +11,7 @@ function shop.update(dt, game)
     -- Update weapon hover states
     for weapon, data in pairs(weapons.getAll()) do
         if data._bounds then
-            data.hover = mx >= data._bounds.x and mx <= data._bounds.x + data._bounds.w and 
-                        my >= data._bounds.y and my <= data._bounds.y + data._bounds.h
+            ui.updateButtonHover(data, mx, my)
         end
     end
     
@@ -25,8 +19,7 @@ function shop.update(dt, game)
     for weapon, data in pairs(weapons.getAll()) do
         for type, v in pairs(data.cosmetics) do
             if v._bounds then
-                v.hover = mx >= v._bounds.x and mx <= v._bounds.x + v._bounds.w and 
-                         my >= v._bounds.y and my <= v._bounds.y + v._bounds.h
+                ui.updateButtonHover(v, mx, my)
             end
         end
     end
@@ -103,7 +96,7 @@ function shop.mousepressed(x, y, button, game)
     -- Check weapon purchases
     for weapon, data in pairs(weapons.getAll()) do
         local b = data._bounds
-        if b and x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
+        if b and ui.pointInRect(x, y, b) then
             if not data.owned and game.shells >= data.cost then
                 game.shells = game.shells - data.cost
                 weapons.setOwned(weapon, true)
@@ -117,7 +110,7 @@ function shop.mousepressed(x, y, button, game)
         if data.owned then
             for type, v in pairs(data.cosmetics) do
                 local b = v._bounds
-                if b and x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then
+                if b and ui.pointInRect(x, y, b) then
                     if not v.owned and game.shells >= v.cost then
                         game.shells = game.shells - v.cost
                         weapons.setCosmeticOwned(weapon, type, true)
