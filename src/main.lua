@@ -9,16 +9,11 @@ local scale_manager = require("scale_manager")
 local settings = require("settings")
 
 function love.load()
-    -- Set window mode to 720p
-    love.window.setMode(1280, 720, {
-        resizable = false,
-        vsync = true,
-        minwidth = 1280,
-        minheight = 720
-    })
-    
     -- Load settings first (includes volume settings)
     settings.load()
+    
+    -- Initialize scale manager
+    scale_manager.update()
     
     -- Then initialize scene (including music)
     scene.load()  
@@ -49,18 +44,37 @@ function love.update(dt)
 end
 
 function love.draw()
+    -- Apply scaling
+    scale_manager.start()
     handleSceneCallback("draw")
+    scale_manager.finish()
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-    handleSceneCallback("mousepressed", x, y, button)
+    -- Convert window coordinates to game coordinates
+    local gameX, gameY = scale_manager.toGameCoords(x, y)
+    handleSceneCallback("mousepressed", gameX, gameY, button)
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
+    -- Convert window coordinates to game coordinates
+    local gameX, gameY = scale_manager.toGameCoords(x, y)
+    
     if scene.current == "game" then
-        pause_menu.mousereleased(x, y, button)
+        pause_menu.mousereleased(gameX, gameY, button)
     elseif scene.current == "menu" then
-        main_menu.mousereleased(x, y, button)
+        main_menu.mousereleased(gameX, gameY, button)
+    end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+    -- Convert window coordinates to game coordinates
+    local gameX, gameY = scale_manager.toGameCoords(x, y)
+    local gameDX = dx / scale_manager.scale_x
+    local gameDY = dy / scale_manager.scale_y
+    
+    if handleSceneCallback("mousemoved", gameX, gameY, gameDX, gameDY, istouch) then
+        return
     end
 end
 

@@ -3,6 +3,7 @@ local scene = require("scene")
 local background_effect = require("background_effect")
 local settings = require("settings")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 
 local main_menu = {
     time = 0,
@@ -19,7 +20,8 @@ local main_menu = {
 }
 
 local buttons = {
-    { text = "Play", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() scene.set("game") end }
+    { text = "Play", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() scene.set("game") end },
+    { text = "Settings", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() settings.toggle() end }
 }
 
 -- Only add exit button if not on iOS
@@ -55,18 +57,18 @@ function main_menu.load()
     -- Load Discord icon
     main_menu.discord_icon = love.graphics.newImage("assets/images/discord.png")
     
-    local screenW, screenH = love.graphics.getDimensions()
+    -- Position main buttons
     local spacing = 20
     
     -- Position main buttons
     for i, b in ipairs(buttons) do
-        b.x = (screenW - b.w) / 2
-        b.y = (screenH / 2 - (#buttons * (b.h + spacing)) / 2) + ((i - 1) * (b.h + spacing))
+        b.x = (scale_manager.design_width - b.w) / 2
+        b.y = (scale_manager.design_height / 2 - (#buttons * (b.h + spacing)) / 2) + ((i - 1) * (b.h + spacing))
     end
     
     -- Position Discord button in bottom right
-    main_menu.discord_button.x = screenW - main_menu.discord_button.size - 20
-    main_menu.discord_button.y = screenH - main_menu.discord_button.size - 20
+    main_menu.discord_button.x = scale_manager.design_width - main_menu.discord_button.size - 20
+    main_menu.discord_button.y = scale_manager.design_height - main_menu.discord_button.size - 20
 end
 
 function main_menu.update(dt)
@@ -80,7 +82,7 @@ function main_menu.update(dt)
     ui.update(dt)
     
     -- Update button hover states
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     local hover_found = false
     
     -- Update main buttons
@@ -111,6 +113,11 @@ function main_menu.update(dt)
     ui.updateButtonHover(ui.mute_button, mx, my)
     ui.updateMuteButton(scene)
     
+    -- Update settings if visible
+    if settings.visible then
+        settings.update(dt)
+    end
+    
     -- Reset button sound flag when no buttons are hovered
     if not hover_found then
         main_menu.button_sound_played = false
@@ -121,12 +128,18 @@ function main_menu.draw()
     -- Draw background effect
     background_effect.draw()
     
+    -- Draw settings if visible and return (modal)
+    if settings.visible then
+        settings.draw()
+        return
+    end
+    
     -- Draw title with animation
     love.graphics.setFont(assets.fonts.title)  -- Use title font instead of bold
     local title = "ClickShot"
     local tw = assets.fonts.title:getWidth(title)
     local th = assets.fonts.title:getHeight()
-    local titleX = (love.graphics.getWidth() - tw) / 2
+    local titleX = (scale_manager.design_width - tw) / 2
     local titleY = 100
     
     -- Save current transform
@@ -185,11 +198,17 @@ function main_menu.draw()
     love.graphics.setFont(assets.fonts.regular)
     local version_text = main_menu.getVersionString()
     love.graphics.setColor(0.7, 0.7, 0.7, 0.8)  -- Slightly transparent gray
-    love.graphics.print(version_text, 20, love.graphics.getHeight() - 30)
+    love.graphics.print(version_text, 20, scale_manager.design_height - 30)
 end
 
 function main_menu.mousepressed(x, y, button)
     if button == 1 then
+        -- Handle settings menu if visible
+        if settings.visible then
+            settings.mousepressed(x, y, button)
+            return
+        end
+        
         -- Mute button
         if ui.handleMuteButtonClick(x, y, button, scene) then
             return
@@ -218,7 +237,10 @@ function main_menu.mousepressed(x, y, button)
 end
 
 function main_menu.mousereleased(x, y, button)
-    -- No action needed
+    -- Handle settings menu if visible
+    if settings.visible then
+        settings.mousereleased(x, y, button)
+    end
 end
 
 return main_menu

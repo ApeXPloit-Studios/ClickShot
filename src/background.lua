@@ -1,4 +1,5 @@
 local background = {}
+local scale_manager = require("scale_manager")
 
 -- Configuration
 local particles = {}
@@ -23,7 +24,7 @@ function background.load()
 end
 
 function background.update(dt)
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     
     for i, p in ipairs(particles) do
         -- Update position
@@ -58,7 +59,7 @@ function background.update(dt)
 end
 
 function background.draw()
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     
     -- Draw gradient background
     local gradient = love.graphics.newMesh(2, "strip", "static")

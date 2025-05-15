@@ -1,3 +1,5 @@
+local scale_manager = require("scale_manager")
+
 local background_effect = {
     particles = {},
     max_particles = 50,
@@ -8,8 +10,8 @@ function background_effect.load()
     -- Initialize particles
     for i = 1, background_effect.max_particles do
         background_effect.particles[i] = {
-            x = love.math.random(0, love.graphics.getWidth()),
-            y = love.math.random(0, love.graphics.getHeight()),
+            x = love.math.random(0, scale_manager.design_width),
+            y = love.math.random(0, scale_manager.design_height),
             size = love.math.random(2, 6),
             speed = love.math.random(20, 50),
             angle = love.math.random(0, math.pi * 2),
@@ -32,10 +34,10 @@ function background_effect.update(dt)
         p.y = p.y + math.sin(p.angle) * p.speed * dt
         
         -- Wrap around screen
-        if p.x < 0 then p.x = love.graphics.getWidth() end
-        if p.x > love.graphics.getWidth() then p.x = 0 end
-        if p.y < 0 then p.y = love.graphics.getHeight() end
-        if p.y > love.graphics.getHeight() then p.y = 0 end
+        if p.x < 0 then p.x = scale_manager.design_width end
+        if p.x > scale_manager.design_width then p.x = 0 end
+        if p.y < 0 then p.y = scale_manager.design_height end
+        if p.y > scale_manager.design_height then p.y = 0 end
         
         -- Change color slightly over time
         p.color.r = 0.2 + 0.2 * math.sin(background_effect.time + i)

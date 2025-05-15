@@ -1,12 +1,13 @@
 local assets = require("assets")
 local weapons = require("weapons")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 local shop = {}
 
 function shop.update(dt, game)
     if not game.shop_visible then return end
     
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     
     -- Update weapon hover states
     for weapon, data in pairs(weapons.getAll()) do
@@ -29,7 +30,7 @@ function shop.draw(game)
     if not game.shop_visible then return end
 
     local w, h = 400, 400  -- Increased height for more items
-    local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+    local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
 
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, w, h, 10, 10)

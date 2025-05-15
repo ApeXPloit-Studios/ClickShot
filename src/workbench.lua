@@ -3,6 +3,7 @@ local gun = require("gun")
 local weapons = require("weapons")
 local save = require("save")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 local workbench = {}
 
 workbench.equipped_weapon = "pistol"  -- Default weapon
@@ -45,7 +46,7 @@ end
 function workbench.update(dt, game)
     if not game.workbench_visible then return end
     
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     
     -- Update weapon button hover states
     for weapon, data in pairs(weapons.getAll()) do
@@ -71,7 +72,7 @@ function workbench.draw(game)
     if not game.workbench_visible then return end
 
     local w, h = 400, 400
-    local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+    local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
 
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, w, h, 10, 10)

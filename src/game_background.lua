@@ -1,3 +1,5 @@
+local scale_manager = require("scale_manager")
+
 local game_background = {
     particles = {},
     max_particles = 30,
@@ -9,8 +11,8 @@ function game_background.load()
     -- Initialize particles
     for i = 1, game_background.max_particles do
         game_background.particles[i] = {
-            x = love.math.random(0, love.graphics.getWidth()),
-            y = love.math.random(0, love.graphics.getHeight()),
+            x = love.math.random(0, scale_manager.design_width),
+            y = love.math.random(0, scale_manager.design_height),
             size = love.math.random(3, 8),
             speed = love.math.random(10, 30),
             angle = love.math.random(0, math.pi * 2),
@@ -37,10 +39,10 @@ function game_background.update(dt, shells)
         p.y = p.y + math.sin(p.angle) * p.speed * dt
         
         -- Wrap around screen
-        if p.x < 0 then p.x = love.graphics.getWidth() end
-        if p.x > love.graphics.getWidth() then p.x = 0 end
-        if p.y < 0 then p.y = love.graphics.getHeight() end
-        if p.y > love.graphics.getHeight() then p.y = 0 end
+        if p.x < 0 then p.x = scale_manager.design_width end
+        if p.x > scale_manager.design_width then p.x = 0 end
+        if p.y < 0 then p.y = scale_manager.design_height end
+        if p.y > scale_manager.design_height then p.y = 0 end
         
         -- Rotate shell particles
         if p.shell then
@@ -67,7 +69,7 @@ function game_background.draw()
     }
     
     gradient:setVertex(1, 0, 0, base_color[1], base_color[2], base_color[3], 1)
-    gradient:setVertex(2, love.graphics.getWidth(), love.graphics.getHeight(), 
+    gradient:setVertex(2, scale_manager.design_width, scale_manager.design_height, 
         highlight_color[1], highlight_color[2], highlight_color[3], 1)
     love.graphics.draw(gradient)
     

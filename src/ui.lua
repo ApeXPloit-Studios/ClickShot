@@ -1,3 +1,5 @@
+local scale_manager = require("scale_manager")
+
 local ui = {
     hover_effect = 0
 }
@@ -6,11 +8,11 @@ local ui = {
 ui.mute_button = {
     x = 20,
     y = 20,
-    w = 80,
+    w = 100,
     h = 32,
     text = "Mute",
     hover = false,
-    _bounds = { x = 20, y = 20, w = 80, h = 32 }
+    _bounds = { x = 20, y = 20, w = 100, h = 32 }
 }
 
 -- Update hover effect animation
@@ -19,6 +21,16 @@ function ui.update(dt)
     if ui.hover_effect > math.pi * 2 then
         ui.hover_effect = 0
     end
+    
+    -- Update mute button position to ensure it stays in the top-right corner
+    ui.mute_button.x = 20
+    ui.mute_button.y = 20
+    ui.mute_button._bounds = { 
+        x = ui.mute_button.x, 
+        y = ui.mute_button.y, 
+        w = ui.mute_button.w, 
+        h = ui.mute_button.h 
+    }
 end
 
 -- Draw a button with hover effects
@@ -44,13 +56,48 @@ function ui.drawButton(button, x, y, width, height)
     love.graphics.setColor(0.5, 0.5, 0.5)
     love.graphics.rectangle("line", 0, 0, width, height, 6, 6)
     
+    -- Calculate vertical center based on font height
+    local font = love.graphics.getFont()
+    local textHeight = font:getHeight()
+    local textY = (height - textHeight) / 2
+    
     -- Draw text with shadow when hovered
     if button.hover then
         love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.printf(button.text, 2, 12, width, "center")
+        love.graphics.printf(button.text, 2, textY + 2, width, "center")
     end
+    
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(button.text, 0, 10, width, "center")
+    love.graphics.printf(button.text, 0, textY, width, "center")
+    love.graphics.pop()
+end
+
+-- Draw a static button without hover animations
+function ui.drawStaticButton(button, x, y, width, height, highlight)
+    love.graphics.push()
+    
+    -- Draw highlight if specified
+    if highlight then
+        love.graphics.setColor(0.4, 0.4, 0.7)
+        love.graphics.rectangle("fill", x, y, width, height, 6, 6)
+    end
+    
+    -- Draw button background
+    love.graphics.setColor(button.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
+    love.graphics.rectangle("fill", x, y, width, height, 6, 6)
+    love.graphics.setColor(0.5, 0.5, 0.5)
+    love.graphics.rectangle("line", x, y, width, height, 6, 6)
+    
+    -- Draw text centered both horizontally and vertically
+    love.graphics.setColor(1, 1, 1)
+    
+    -- Calculate vertical center based on font height
+    local font = love.graphics.getFont()
+    local textHeight = font:getHeight()
+    local textY = y + (height - textHeight) / 2
+    
+    love.graphics.printf(button.text, x, textY, width, "center")
+    
     love.graphics.pop()
 end
 
@@ -76,7 +123,7 @@ end
 
 -- Draw the mute button
 function ui.drawMuteButton(assets)
-    ui.drawButton(ui.mute_button, ui.mute_button.x, ui.mute_button.y, 
+    ui.drawStaticButton(ui.mute_button, ui.mute_button.x, ui.mute_button.y, 
                   ui.mute_button.w, ui.mute_button.h)
 end
 

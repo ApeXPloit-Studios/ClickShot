@@ -5,6 +5,7 @@ local shop = require("shop")
 local background_effect = require("background_effect")
 local settings = require("settings")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 
 local pause_menu = {
     visible = false,
@@ -46,7 +47,7 @@ function pause_menu.toggle()
     if pause_menu.visible then
         -- Initialize button bounds when menu becomes visible
         local w, h = 400, 300
-        local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+        local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
         local spacing = 60
         local startY = y + 50
         local buttonH = 50
@@ -75,7 +76,7 @@ function pause_menu.update(dt)
     ui.update(dt)
     
     -- Update button hover states
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     for _, b in ipairs(pause_menu.buttons) do
         ui.updateButtonHover(b, mx, my)
     end
@@ -87,7 +88,7 @@ function pause_menu.draw()
     -- Draw background effect with overlay
     background_effect.draw()
     love.graphics.setColor(0, 0, 0, 0.5)
-    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+    love.graphics.rectangle("fill", 0, 0, scale_manager.design_width, scale_manager.design_height)
 
     -- Draw settings if visible and return (modal)
     if settings.visible then
@@ -97,7 +98,7 @@ function pause_menu.draw()
 
     -- Draw menu
     local w, h = 400, 300
-    local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+    local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
 
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, w, h, 10, 10)

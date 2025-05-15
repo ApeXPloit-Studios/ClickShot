@@ -1,11 +1,12 @@
 local assets = require("assets")
 local scene = require("scene")
+local scale_manager = require("scale_manager")
 
 local gun = {}
 
 -- Constants
-local DEFAULT_X = 400
-local DEFAULT_Y = 300
+local DEFAULT_X = scale_manager.design_width / 2
+local DEFAULT_Y = scale_manager.design_height / 2.4
 local TOTAL_FRAMES = 12
 local BASE_SCALE = 4.0  -- Increased from 2.5 to 4.0 for larger gun
 local MIN_FRAME_TIME = 1 / 30  -- Increased from 24 to 30 for smoother animation

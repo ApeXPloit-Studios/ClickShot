@@ -1,5 +1,6 @@
 local assets = require("assets")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 local upgrades = {
     list = {},
     selected_index = 1,
@@ -131,7 +132,7 @@ function upgrades.update(dt, game)
     end
     
     -- Update hover states
-    local mx, my = love.mouse.getPosition()
+    local mx, my = scale_manager.getMousePosition()
     for _, upgrade in ipairs(upgrades.list) do
         if upgrade._bounds then
             ui.updateButtonHover(upgrade, mx, my)

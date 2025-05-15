@@ -10,9 +10,10 @@ local game_background = require("game_background")
 local scene = require("scene")
 local settings = require("settings")
 local ui = require("ui")
+local scale_manager = require("scale_manager")
 
 -- Constants
-local GAME_WIDTH = 1000
+local GAME_WIDTH = scale_manager.design_width - 280  -- Main game area width (minus upgrades panel)
 local UPGRADES_PANEL_WIDTH = 280
 local BUTTON_WIDTH = 150
 local BUTTON_HEIGHT = 40
@@ -108,7 +109,9 @@ function game.update(dt)
     if game.button_cooldown > 0 then
         game.button_cooldown = game.button_cooldown - dt
     end
-    local mx, my = love.mouse.getPosition()
+
+    -- Update button hover states
+    local mx, my = scale_manager.getMousePosition()
     for _, button in pairs(game.buttons) do
         ui.updateButtonHover(button, mx, my)
     end
@@ -165,7 +168,12 @@ end
 
 function game.draw()
     -- Draw game area (slightly smaller to accommodate upgrades panel)
-    love.graphics.setScissor(0, 0, GAME_WIDTH, 720)
+    local x1, y1 = scale_manager.toWindowCoords(0, 0)
+    local x2, y2 = scale_manager.toWindowCoords(GAME_WIDTH, 720)
+    local scissor_width = x2 - x1
+    local scissor_height = y2 - y1
+    
+    love.graphics.setScissor(x1, y1, scissor_width, scissor_height)
     
     -- Draw backgrounds
     game_background.draw()
@@ -185,10 +193,9 @@ function game.draw()
     end
     gun.setPosition(oldX)
     
-    -- Draw menu buttons at bottom
-    local buttonY = 720 - BUTTON_HEIGHT - 20  -- 20px padding from bottom
     local totalButtonWidth = (BUTTON_WIDTH * 2) + BUTTON_SPACING
     local startX = (GAME_WIDTH - totalButtonWidth) / 2
+    local buttonY = scale_manager.design_height - BUTTON_HEIGHT - 20  -- Define buttonY
 
     -- Store button bounds for click detection
     game.buttons.shop._bounds = {
@@ -225,9 +232,9 @@ function game.draw()
     love.graphics.setScissor()
     
     -- Draw upgrades panel (always visible)
-    local panelX = 1280 - UPGRADES_PANEL_WIDTH
+    local panelX = scale_manager.design_width - UPGRADES_PANEL_WIDTH
     love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.rectangle("fill", panelX, 0, UPGRADES_PANEL_WIDTH, 720)
+    love.graphics.rectangle("fill", panelX, 0, UPGRADES_PANEL_WIDTH, scale_manager.design_height)
     
     -- Draw upgrades title
     love.graphics.setColor(1, 1, 1)
