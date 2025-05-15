@@ -4,6 +4,7 @@ local background_effect = require("background_effect")
 local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local save_slot_menu = require("save_slot_menu")
 
 local main_menu = {
     time = 0,
@@ -20,7 +21,7 @@ local main_menu = {
 }
 
 local buttons = {
-    { text = "Play", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() scene.set("game") end },
+    { text = "Play", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() save_slot_menu.show("load") end },
     { text = "Settings", x = 0, y = 0, w = 200, h = 50, hover = false, action = function() settings.toggle() end }
 }
 
@@ -53,6 +54,7 @@ end
 
 function main_menu.load()
     background_effect.load()
+    save_slot_menu.load()
     
     -- Load Discord icon
     main_menu.discord_icon = love.graphics.newImage("assets/images/discord.png")
@@ -118,6 +120,11 @@ function main_menu.update(dt)
         settings.update(dt)
     end
     
+    -- Update save slot menu if visible
+    if save_slot_menu.visible then
+        save_slot_menu.update(dt)
+    end
+    
     -- Reset button sound flag when no buttons are hovered
     if not hover_found then
         main_menu.button_sound_played = false
@@ -134,34 +141,30 @@ function main_menu.draw()
         return
     end
     
+    -- Draw save slot menu if visible and return (modal)
+    if save_slot_menu.visible then
+        save_slot_menu.draw()
+        return
+    end
+    
     -- Draw title with animation
     love.graphics.setFont(assets.fonts.title)  -- Use title font instead of bold
-    local title = "ClickShot"
-    local tw = assets.fonts.title:getWidth(title)
-    local th = assets.fonts.title:getHeight()
-    local titleX = (scale_manager.design_width - tw) / 2
-    local titleY = 100
-    
-    -- Save current transform
-    love.graphics.push()
-    
-    -- Apply title animation
-    love.graphics.translate(titleX + tw/2, titleY + th/2)
-    love.graphics.rotate(main_menu.title_rotation)
-    love.graphics.scale(main_menu.title_scale, main_menu.title_scale)
-    love.graphics.translate(-tw/2, -th/2)
-    
-    -- Draw title with glow effect
-    for i = 1, 5 do
-        local alpha = 1 - (i * 0.2)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.print(title, i, i)
-    end
     love.graphics.setColor(1, 1, 1)
-    love.graphics.print(title, 0, 0)
     
-    -- Restore transform
-    love.graphics.pop()
+    ui.drawAnimatedTitle(
+        "ClickShot", 
+        scale_manager.design_width / 2, 
+        100 + assets.fonts.title:getHeight()/2, 
+        main_menu.title_scale, 
+        assets.fonts.title,
+        {
+            centerX = true,
+            centerY = true,
+            rotation = main_menu.title_rotation,
+            glowLayers = 5,
+            glowIntensity = 0.2
+        }
+    )
     
     -- Draw main buttons
     love.graphics.setFont(assets.fonts.bold)  -- Set back to regular bold font for buttons
@@ -206,6 +209,12 @@ function main_menu.mousepressed(x, y, button)
         -- Handle settings menu if visible
         if settings.visible then
             settings.mousepressed(x, y, button)
+            return
+        end
+        
+        -- Handle save slot menu if visible
+        if save_slot_menu.visible then
+            save_slot_menu.mousepressed(x, y, button)
             return
         end
         

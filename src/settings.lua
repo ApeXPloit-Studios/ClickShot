@@ -104,6 +104,7 @@ end
 
 function settings.load()
     assets.load()
+    scene.loadAudioState()
     
     -- Sync settings with scene module state
     settings.sliders.music.value = scene.audio.music_volume
@@ -142,8 +143,11 @@ end
 function settings.save()
     -- Save volume settings
     love.filesystem.write("user_settings.lua", string.format(
-        [[return function() return { music_volume = %f, sfx_volume = %f } end]], 
-        settings.sliders.music.value, settings.sliders.sfx.value))
+        [[return function() return { music_volume = %f, sfx_volume = %f, muted = %s } end]], 
+        settings.sliders.music.value, 
+        settings.sliders.sfx.value,
+        scene.isMuted() and "true" or "false"
+    ))
     
     -- Save graphics settings
     love.filesystem.write("graphics_settings.lua", string.format(
@@ -278,6 +282,13 @@ function settings.update(dt)
                 local relativeX = mx - slider._bounds.x
                 slider.value = math.max(0, math.min(1, relativeX / slider._bounds.w))
                 
+                -- Update audio system directly
+                if name == "music" then
+                    scene.audio.music_volume = slider.value
+                elseif name == "sfx" then
+                    scene.audio.sfx_volume = slider.value
+                end
+                
                 -- Apply volume changes in real-time
                 applyVolumeSettings()
             end
@@ -318,23 +329,14 @@ function settings.draw()
     -- Draw title with animation
     love.graphics.setFont(assets.fonts.bold)
     love.graphics.setColor(1, 1, 1)
-    local title = "Settings"
-    local tw = assets.fonts.bold:getWidth(title)
-    local th = assets.fonts.bold:getHeight()
-    
-    love.graphics.push()
-    love.graphics.translate(x + w/2, y + 10 + th/2)
-    love.graphics.scale(settings.title_scale, settings.title_scale)
-    love.graphics.translate(-tw/2, -th/2)
-    
-    for i = 1, 5 do
-        local alpha = 1 - (i * 0.2)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.print(title, i, i)
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print(title, 0, 0)
-    love.graphics.pop()
+    ui.drawAnimatedTitle(
+        "Settings", 
+        x + w/2, 
+        y + 10 + assets.fonts.bold:getHeight()/2, 
+        settings.title_scale, 
+        assets.fonts.bold,
+        {centerX = true, centerY = true}
+    )
     
     -- Draw mute button (now properly positioned in top-right)
     ui.drawMuteButton(assets)
@@ -519,9 +521,17 @@ end
 
 function settings.mousereleased(x, y, button)
     if button == 1 then
-        for _, slider in pairs(settings.sliders) do
+        for name, slider in pairs(settings.sliders) do
             if slider.dragging then
                 slider.dragging = false
+                
+                -- Apply changes to scene audio system
+                if name == "music" then
+                    scene.setMusicVolume(slider.value)
+                elseif name == "sfx" then
+                    scene.setSfxVolume(slider.value)
+                end
+                
                 settings.save()
             end
         end

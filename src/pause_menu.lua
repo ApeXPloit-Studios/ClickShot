@@ -6,6 +6,7 @@ local background_effect = require("background_effect")
 local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local save_slot_menu = require("save_slot_menu")
 
 local pause_menu = {
     visible = false,
@@ -16,6 +17,11 @@ local pause_menu = {
 
 -- Define button actions separately
 local function resumeAction()
+    pause_menu.visible = false
+end
+
+local function saveGameAction()
+    save_slot_menu.show("save")
     pause_menu.visible = false
 end
 
@@ -33,6 +39,7 @@ end
 -- Initialize buttons
 pause_menu.buttons = {
     { text = "Resume", hover = false, action = resumeAction },
+    { text = "Save Game", hover = false, action = saveGameAction },
     { text = "Settings", hover = false, action = function() settings.toggle() end },
     { text = "Main Menu", hover = false, action = mainMenuAction }
 }
@@ -72,6 +79,11 @@ function pause_menu.update(dt)
     -- Update settings
     settings.update(dt)
     
+    -- Update save slot menu
+    if save_slot_menu.visible then
+        save_slot_menu.update(dt)
+    end
+    
     -- Update UI hover effect
     ui.update(dt)
     
@@ -96,6 +108,12 @@ function pause_menu.draw()
         return
     end
 
+    -- Draw save slot menu if visible and return 
+    if save_slot_menu.visible then
+        save_slot_menu.draw()
+        return
+    end
+
     -- Draw menu
     local w, h = 400, 300
     local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
@@ -107,25 +125,14 @@ function pause_menu.draw()
     love.graphics.setFont(assets.fonts.bold)
     love.graphics.setColor(1, 1, 1)
     
-    local title = "Paused"
-    local tw = assets.fonts.bold:getWidth(title)
-    local th = assets.fonts.bold:getHeight()
-    
-    love.graphics.push()
-    love.graphics.translate(x + w/2, y + 10 + th/2)
-    love.graphics.scale(pause_menu.title_scale, pause_menu.title_scale)
-    love.graphics.translate(-tw/2, -th/2)
-    
-    -- Draw title with glow effect
-    for i = 1, 5 do
-        local alpha = 1 - (i * 0.2)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.print(title, i, i)
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print(title, 0, 0)
-    
-    love.graphics.pop()
+    ui.drawAnimatedTitle(
+        "Paused",
+        x + w/2,
+        y + 10 + assets.fonts.bold:getHeight()/2,
+        pause_menu.title_scale,
+        assets.fonts.bold,
+        {centerX = true, centerY = true}
+    )
 
     -- Draw buttons
     for _, b in ipairs(pause_menu.buttons) do
@@ -139,6 +146,12 @@ function pause_menu.mousepressed(mx, my, button)
     -- Check settings first
     if settings.visible then
         settings.mousepressed(mx, my, button)
+        return
+    end
+
+    -- Check save slot menu
+    if save_slot_menu.visible then
+        save_slot_menu.mousepressed(mx, my, button)
         return
     end
 

@@ -24,20 +24,23 @@ function workbench.load()
     
     -- Load saved data
     local data = save.load()
-    if data.equipped then
-        -- Merge saved equipped data with defaults
-        for weapon, attachments in pairs(data.equipped) do
-            if workbench.equipped[weapon] then
-                for type, equipped in pairs(attachments) do
-                    if workbench.equipped[weapon][type] ~= nil then
-                        workbench.equipped[weapon][type] = equipped
-                    end
+    -- Ensure equipped data exists
+    if not data.equipped then
+        return
+    end
+    -- Merge saved equipped data with defaults
+    for weapon, attachments in pairs(data.equipped) do
+        if workbench.equipped[weapon] then
+            for type, equipped in pairs(attachments) do
+                if workbench.equipped[weapon][type] ~= nil then
+                    workbench.equipped[weapon][type] = equipped
                 end
             end
         end
     end
     
-    if data.equipped_weapon then
+    -- Set equipped weapon if specified
+    if data.equipped_weapon and workbench.equipped[data.equipped_weapon] then
         workbench.equipped_weapon = data.equipped_weapon
         workbench.updateGunSprite()
     end
@@ -162,6 +165,17 @@ end
 
 function workbench.updateGunSprite()
     local weapon = workbench.equipped_weapon
+    
+    -- Ensure equipped data exists for this weapon
+    if not workbench.equipped then
+        workbench.initEquipped()
+    end
+    
+    -- Ensure the weapon exists in equipped data
+    if not workbench.equipped[weapon] then
+        workbench.equipped[weapon] = { muzzle = false, sight = false, laser = false }
+    end
+    
     local combo = {}
     if workbench.equipped[weapon].muzzle then table.insert(combo, "muzzle") end
     if workbench.equipped[weapon].sight  then table.insert(combo, "sight") end

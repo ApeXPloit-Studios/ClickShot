@@ -92,34 +92,23 @@ function gun.draw()
     )
 end
 
--- Draw hitbox for debugging
-function gun.drawHitbox()
-    if not sprite then return end
-    
-    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
-    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
-    
-    love.graphics.setColor(1, 0, 0, 0.5)
-    love.graphics.rectangle("fill", hitbox_x, hitbox_y, hitbox_width, hitbox_height)
-    love.graphics.setColor(1, 1, 1, 1)
-end
-
 function gun.isClicked(mx, my)
     if not sprite then return false end  -- Don't process clicks if no sprite is set
 
-    -- Calculate actual hitbox dimensions
-    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
-    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
+    -- Get the gun draw position
+    local draw_x = x - (gun_width * BASE_SCALE) / 2
+    local draw_y = y - (gun_height * BASE_SCALE) / 2
     
-    -- Calculate hitbox position with offset
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
-
-    -- Check if mouse is within hitbox bounds
-    return mx >= hitbox_x and mx <= hitbox_x + hitbox_width and 
-           my >= hitbox_y and my <= hitbox_y + hitbox_height
+    -- Calculate hitbox dimensions based on the full sprite size
+    local hitbox_width = gun_width * BASE_SCALE
+    local hitbox_height = gun_height * BASE_SCALE
+    
+    -- Add a generous margin to make clicking easier
+    local margin = 20
+    
+    -- Check if mouse is within extended hitbox bounds
+    return mx >= (draw_x - margin) and mx <= (draw_x + hitbox_width + margin) and 
+           my >= (draw_y - margin) and my <= (draw_y + hitbox_height + margin)
 end
 
 function gun.shoot()

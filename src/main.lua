@@ -7,6 +7,7 @@ local scene = require("scene")
 local pause_menu = require("pause_menu")
 local scale_manager = require("scale_manager")
 local settings = require("settings")
+local save_slot_menu = require("save_slot_menu")
 
 function love.load()
     -- Load settings first (includes volume settings)
@@ -22,6 +23,7 @@ function love.load()
     -- Load other modules
     main_menu.load()
     game.load()
+    save_slot_menu.load()
 end
 
 -- Handle scene-specific callbacks
@@ -92,4 +94,11 @@ end
 
 function love.resize(width, height)
     scale_manager.update()
+    save_slot_menu.handleResize()
 end
+function love.handlers.gameReloadSaveData()
+    if scene.current == "game" and game.handleEvent then
+        game.handleEvent("gameReloadSaveData")
+    end
+end
+

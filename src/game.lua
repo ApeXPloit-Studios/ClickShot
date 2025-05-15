@@ -11,6 +11,7 @@ local scene = require("scene")
 local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local save_slot_menu = require("save_slot_menu")
 
 -- Constants
 local GAME_WIDTH = scale_manager.design_width - 280  -- Main game area width (minus upgrades panel)
@@ -44,11 +45,32 @@ function game.load()
     gun.load()
     background.load()
     game_background.load()
+    save_slot_menu.load()
     
     -- Load saved data
     local saved = save.load()
     game.shells = saved.shells
-    shop.cosmetics = saved.cosmetics
+    
+    -- Update weapons from save data
+    local weapons_module = require("weapons")
+    if saved.cosmetics then
+        -- Update weapon ownership and cosmetics
+        for weapon_name, weapon_data in pairs(saved.cosmetics) do
+            if weapons_module.data[weapon_name] then
+                weapons_module.data[weapon_name].owned = weapon_data.owned or false
+                
+                -- Update cosmetics ownership
+                if weapon_data.cosmetics then
+                    for cosmetic_name, cosmetic_data in pairs(weapon_data.cosmetics) do
+                        if weapons_module.data[weapon_name].cosmetics[cosmetic_name] then
+                            weapons_module.data[weapon_name].cosmetics[cosmetic_name].owned = 
+                                cosmetic_data.owned or false
+                        end
+                    end
+                end
+            end
+        end
+    end
     
     -- Load workbench data
     workbench.load()
@@ -86,8 +108,30 @@ local function saveGameState()
 end
 
 function game.update(dt)
+    -- Check if a save was requested from the save slot menu
+    if scene.isSavePending() then
+        save.update(
+            game.shells, 
+            shop.cosmetics,
+            workbench.equipped,
+            workbench.equipped_weapon
+        )
+        scene.clearSavePending()
+    end
+    
+    -- Check if a data reload was requested
+    if scene.isDataReloadPending() then
+        game.reloadSaveData()
+        scene.clearDataReloadPending()
+    end
+
     if pause_menu.visible then
         pause_menu.update(dt)
+        return
+    end
+
+    if save_slot_menu.visible then
+        save_slot_menu.update(dt)
         return
     end
 
@@ -167,6 +211,12 @@ function game.update(dt)
 end
 
 function game.draw()
+    -- Draw save slot menu if visible
+    if save_slot_menu.visible then
+        save_slot_menu.draw()
+        return
+    end
+
     -- Draw game area (slightly smaller to accommodate upgrades panel)
     local x1, y1 = scale_manager.toWindowCoords(0, 0)
     local x2, y2 = scale_manager.toWindowCoords(GAME_WIDTH, 720)
@@ -188,9 +238,6 @@ function game.draw()
     local oldX = gun.getPosition()
     gun.setPosition(GAME_WIDTH / 2)
     gun.draw()
-    if game.debug then
-        gun.drawHitbox()
-    end
     gun.setPosition(oldX)
     
     local totalButtonWidth = (BUTTON_WIDTH * 2) + BUTTON_SPACING
@@ -307,10 +354,14 @@ function game.keypressed(key)
         game.toggle_workbench()
         saveGameState()
     end
-    if key == "f3" then game.debug = not game.debug end
 end
 
 function game.mousepressed(x, y, button)
+    if save_slot_menu.visible then
+        save_slot_menu.mousepressed(x, y, button)
+        return
+    end
+
     if pause_menu.visible then
         pause_menu.mousepressed(x, y, button)
         return
@@ -359,14 +410,111 @@ function game.mousepressed(x, y, button)
 
     -- Check gun clicks last, and only if we're in the game area
     if button == 1 and x < love.graphics.getWidth() - UPGRADES_PANEL_WIDTH then
-        if gun.isClicked(x, y) then
+        local mx, my = scale_manager.getMousePosition()
+        
+        -- Position gun in the same place as when drawing it
+        local oldX = gun.getPosition()
+        gun.setPosition(GAME_WIDTH / 2)
+        
+        if gun.isClicked(mx, my) then
             local clicked = gun.shoot()
             if clicked then
                 game.shells = game.shells + 1
                 saveGameState()
             end
         end
+        
+        -- Restore original gun position
+        gun.setPosition(oldX)
     end
+end
+
+-- Load/reload saved data from the active slot
+function game.reloadSaveData()
+    local active_slot = save.getActiveSlot()
+    local saved = save.load(active_slot)
+    
+    -- Update game state with loaded data
+    game.shells = saved.shells
+    
+    -- Update weapons from save data
+    local weapons_module = require("weapons")
+    if saved.cosmetics then
+        -- Update weapon ownership and cosmetics
+        for weapon_name, weapon_data in pairs(saved.cosmetics) do
+            if weapons_module.data[weapon_name] then
+                weapons_module.data[weapon_name].owned = weapon_data.owned or false
+                
+                -- Update cosmetics ownership
+                if weapon_data.cosmetics then
+                    for cosmetic_name, cosmetic_data in pairs(weapon_data.cosmetics) do
+                        if weapons_module.data[weapon_name].cosmetics[cosmetic_name] then
+                            weapons_module.data[weapon_name].cosmetics[cosmetic_name].owned = 
+                                cosmetic_data.owned or false
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Reset upgrades
+    for _, upgrade in ipairs(upgrades.list) do
+        upgrade.count = 0
+    end
+    
+    -- Load upgrades if they exist in save data
+    if saved.upgrades then
+        for i, upgrade in ipairs(upgrades.list) do
+            if saved.upgrades[i] and saved.upgrades[i].count then
+                local count = tonumber(saved.upgrades[i].count) or 0
+                -- Clamp to [0, 100000] to prevent corruption
+                count = math.max(0, math.min(100000, math.floor(count)))
+                upgrade.count = count
+            end
+        end
+    end
+    
+    -- Reload workbench equipped items
+    -- First initialize default equipment
+    workbench.initEquipped()
+    
+    -- Then load saved equipment data
+    if saved.equipped then
+        for weapon, attachments in pairs(saved.equipped) do
+            if workbench.equipped[weapon] then
+                for attachment_type, equipped in pairs(attachments) do
+                    if workbench.equipped[weapon][attachment_type] ~= nil then
+                        workbench.equipped[weapon][attachment_type] = equipped
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Set equipped weapon
+    if saved.equipped_weapon then
+        workbench.equipped_weapon = saved.equipped_weapon
+    else
+        workbench.equipped_weapon = "pistol"  -- Default to pistol
+    end
+    
+    -- Update the gun sprite
+    if workbench.updateGunSprite then
+        workbench.updateGunSprite()
+    end
+    
+    -- Apply all upgrade effects
+    upgrades.applyAllEffects(game)
+end
+
+-- Handle LÖVE events
+function game.handleEvent(name)
+    if name == "gameReloadSaveData" then
+        game.reloadSaveData()
+        return true
+    end
+    return false
 end
 
 return game

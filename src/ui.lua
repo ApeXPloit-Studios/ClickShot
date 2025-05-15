@@ -136,4 +136,55 @@ function ui.handleMuteButtonClick(x, y, button, scene)
     return false
 end
 
+-- Draw an animated title with scaling and glow effect
+function ui.drawAnimatedTitle(title, x, y, scale, font, options)
+    options = options or {}
+    
+    -- Get title dimensions
+    local tw = font:getWidth(title)
+    local th = font:getHeight()
+    
+    -- Auto-center horizontally if requested (x is screen center)
+    if options.centerX then
+        x = x - tw/2
+    end
+    
+    -- Auto-adjust vertical position if requested
+    if options.centerY then
+        y = y - th/2
+    end
+    
+    -- Save current transform
+    love.graphics.push()
+    
+    -- Apply title animation
+    love.graphics.translate(x + tw/2, y + th/2)
+    
+    -- Apply rotation if provided
+    if options.rotation then
+        love.graphics.rotate(options.rotation)
+    end
+    
+    love.graphics.scale(scale, scale)
+    love.graphics.translate(-tw/2, -th/2)
+    
+    -- Adjust glow intensity and spread
+    local glowLayers = options.glowLayers or 5
+    local glowIntensity = options.glowIntensity or 0.2
+    
+    -- Draw title with glow effect
+    for i = 1, glowLayers do
+        local alpha = 1 - (i * glowIntensity)
+        love.graphics.setColor(1, 1, 1, alpha)
+        love.graphics.print(title, i, i)
+    end
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print(title, 0, 0)
+    
+    -- Restore transform
+    love.graphics.pop()
+    
+    return tw, th -- Return width and height for convenience
+end
+
 return ui 
