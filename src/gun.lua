@@ -29,6 +29,9 @@ local click_times = {}
 local last_click_time = 0
 local animating = false
 
+-- Power system
+local current_power = 1  -- Default power value
+
 -- Hitbox adjustment (percentage of sprite size)
 local hitbox = {
     width_percent = 0.9,  -- Increased from 0.8 to 0.9 for better clickability
@@ -105,18 +108,18 @@ function gun.isClicked(mx, my)
     
     -- Add a generous margin to make clicking easier
     local margin = 20
-    
+
     -- Check if mouse is within extended hitbox bounds
     return mx >= (draw_x - margin) and mx <= (draw_x + hitbox_width + margin) and 
            my >= (draw_y - margin) and my <= (draw_y + hitbox_height + margin)
 end
 
 function gun.shoot()
-    if not sprite then return false end  -- Don't shoot if no sprite is set
+    if not sprite then return false, 0 end  -- Don't shoot if no sprite is set
 
     local now = love.timer.getTime()
     if now - last_click_time < CLICK_COOLDOWN then
-        return false
+        return false, 0
     end
 
     last_click_time = now
@@ -130,7 +133,10 @@ function gun.shoot()
         scene.playSound(click)
     end
     
-    return true
+    -- Use the current power value to determine shells earned
+    local shells_earned = math.max(1, math.floor(current_power))
+    
+    return true, shells_earned
 end
 
 function gun.setSprite(newSprite)
@@ -154,6 +160,16 @@ end
 
 function gun.setPosition(newX)
     x = newX
+end
+
+-- Set the current power value (called from workbench)
+function gun.setPower(power)
+    current_power = power
+end
+
+-- Get the current power value
+function gun.getPower()
+    return current_power
 end
 
 return gun

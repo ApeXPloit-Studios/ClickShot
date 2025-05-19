@@ -110,12 +110,12 @@ end
 function game.update(dt)
     -- Check if a save was requested from the save slot menu
     if scene.isSavePending() then
-        save.update(
-            game.shells, 
-            shop.cosmetics,
-            workbench.equipped,
-            workbench.equipped_weapon
-        )
+    save.update(
+        game.shells, 
+        shop.cosmetics,
+        workbench.equipped,
+        workbench.equipped_weapon
+    )
         scene.clearSavePending()
     end
     
@@ -164,9 +164,9 @@ function game.update(dt)
     if game.gamepad then
         -- A button or right trigger to shoot
         if game.gamepad:isGamepadDown("a") or game.gamepad:getAxis(5) > 0.5 then
-            local clicked = gun.shoot()
+            local clicked, shells_earned = gun.shoot()
             if clicked then
-                game.shells = game.shells + 1
+                game.shells = game.shells + shells_earned
                 saveGameState()
             end
         end
@@ -233,6 +233,10 @@ function game.draw()
     love.graphics.setFont(assets.fonts.bold)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Shells: " .. math.floor(game.shells), 20, 20)
+    
+    -- Draw current weapon power
+    local power = gun.getPower() or 1
+    love.graphics.print("Power: " .. power, 20, 60)
     
     -- Center the gun
     local oldX = gun.getPosition()
@@ -417,15 +421,25 @@ function game.mousepressed(x, y, button)
         gun.setPosition(GAME_WIDTH / 2)
         
         if gun.isClicked(mx, my) then
-            local clicked = gun.shoot()
+            local clicked, shells_earned = gun.shoot()
             if clicked then
-                game.shells = game.shells + 1
+                game.shells = game.shells + shells_earned
                 saveGameState()
             end
         end
         
         -- Restore original gun position
         gun.setPosition(oldX)
+    end
+end
+
+-- Handle mouse wheel events
+function game.wheelmoved(x, y)
+    -- Forward wheel events to appropriate modules
+    if game.workbench_visible then
+        workbench.wheelmoved(x, y)
+    elseif game.shop_visible then
+        -- Could add shop scrolling here if needed later
     end
 end
 

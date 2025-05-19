@@ -92,10 +92,16 @@ function love.keypressed(key)
     end
 end
 
+function love.wheelmoved(x, y)
+    -- Forward wheel events to the current scene
+    handleSceneCallback("wheelmoved", x, y)
+end
+
 function love.resize(width, height)
     scale_manager.update()
     save_slot_menu.handleResize()
 end
+
 function love.handlers.gameReloadSaveData()
     if scene.current == "game" and game.handleEvent then
         game.handleEvent("gameReloadSaveData")

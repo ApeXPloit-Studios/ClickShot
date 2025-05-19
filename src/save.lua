@@ -127,7 +127,7 @@ function save.initNewGame(slot)
         -- Initialize equipped data for each weapon
         fresh_data.equipped = {
             pistol = { muzzle = false, sight = false, laser = false },
-            ak47 = { muzzle = false, sight = false, laser = false }
+            ak47 = { sight = false, grip = false, stock = false, mag = false }
         }
         
         -- Pistol is the default equipped weapon
