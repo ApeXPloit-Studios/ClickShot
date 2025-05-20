@@ -248,7 +248,7 @@ function game.draw()
     
     -- Draw current weapon power
     local power = gun.getPower() or 1
-    love.graphics.print("Power: " .. power, 20, 60)
+    love.graphics.print("Multiplier: " .. power, 20, 60)
     
     -- Center the gun
     local oldX = gun.getPosition()
