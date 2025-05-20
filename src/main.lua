@@ -1,6 +1,7 @@
 -- Set save directory identity before loading any modules
 love.filesystem.setIdentity("ArcShell")
 
+local steam = require("steam")
 local game = require("game")
 local main_menu = require("main_menu")
 local scene = require("scene")
@@ -10,6 +11,8 @@ local settings = require("settings")
 local save_slot_menu = require("save_slot_menu")
 
 function love.load()
+    -- Initialize Steamworks API
+    steam.init()
     -- Load settings first (includes volume settings)
     settings.load()
     
@@ -42,6 +45,7 @@ local function handleSceneCallback(callback, ...)
 end
 
 function love.update(dt)
+    steam.update()
     handleSceneCallback("update", dt)
 end
 
@@ -106,5 +110,9 @@ function love.handlers.gameReloadSaveData()
     if scene.current == "game" and game.handleEvent then
         game.handleEvent("gameReloadSaveData")
     end
+end
+
+function love.quit()
+    steam.shutdown()
 end
 

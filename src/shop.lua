@@ -2,6 +2,7 @@ local assets = require("assets")
 local weapons = require("weapons")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local steam = require("steam")
 local shop = {}
 
 -- Track which weapon's cosmetics are currently being shown
@@ -238,6 +239,8 @@ function shop.mousepressed(x, y, button, game)
             if data._bounds and ui.pointInRect(x, y, data._bounds) then
                 if not data.owned and game.shells >= data.cost then
                     game.shells = game.shells - data.cost
+                    data.owned = true
+                    steam.setAchievement(steam.achievements.FIRST_WEAPON)
                     weapons.setOwned(weapon, true)
                 end
                 return

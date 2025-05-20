@@ -56,7 +56,7 @@ function save_slot_menu.updateButtonText()
             if save_slot_menu.action == "load" then
                 save_slot_menu.left_button.text = "Play"
             else
-                save_slot_menu.left_button.text = "Save Game"
+                save_slot_menu.left_button.text = "Save"
             end
         else
             -- If slot is empty, show New Game
@@ -73,7 +73,7 @@ function save_slot_menu.show(action)
     if save_slot_menu.action == "load" then
         save_slot_menu.left_button.text = "New Game"
     else
-        save_slot_menu.left_button.text = "Save Game"
+        save_slot_menu.left_button.text = "Save"
     end
     
     -- Ensure slots and bounds are properly initialized
@@ -187,7 +187,7 @@ function save_slot_menu.draw()
     -- Draw title with animation
     love.graphics.setFont(assets.fonts.bold)
     love.graphics.setColor(1, 1, 1)
-    local title = save_slot_menu.action == "load" and "Select Save Slot" or "Save Game"
+    local title = save_slot_menu.action == "load" and "Select Save Slot" or "Save"
     ui.drawAnimatedTitle(
         title, 
         scale_manager.design_width / 2, 

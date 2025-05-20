@@ -1,6 +1,7 @@
 local assets = require("assets")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local steam = require("steam")
 local upgrades = {
     list = {},
     selected_index = 1,
@@ -118,6 +119,9 @@ function upgrades.buyUpgrade(index, game)
         game.shells = game.shells - cost
         upgrade.count = upgrade.count + 1
         upgrades.applyAllEffects(game)
+        if upgrade.count == 1 then
+            steam.setAchievement(steam.achievements.FIRST_UPGRADE)
+        end
         return true
     end
     

@@ -4,6 +4,7 @@ local weapons = require("weapons")
 local save = require("save")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local steam = require("steam")
 local workbench = {}
 
 workbench.equipped_weapon = "pistol"  -- Default weapon
@@ -265,9 +266,13 @@ function workbench.mousepressed(x, y, button, game)
             for type, v in pairs(weapon_data.cosmetics) do
                 if v._bounds and ui.pointInRect(x, y, v._bounds) then
                     if v.owned then
-                        workbench.equipped[workbench.expanded_weapon][type] = not workbench.equipped[workbench.expanded_weapon][type]
+                        local was_equipped = workbench.equipped[workbench.expanded_weapon][type]
+                        workbench.equipped[workbench.expanded_weapon][type] = not was_equipped
                         workbench.updateGunSprite()
                         save.update(game.shells, weapons.getAll(), workbench.equipped, workbench.equipped_weapon)
+                        if not was_equipped then
+                            steam.setAchievement(steam.achievements.FIRST_ATTACHMENT)
+                        end
                     end
                     return
                 end

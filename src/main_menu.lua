@@ -182,18 +182,23 @@ function main_menu.draw()
     -- Special case for circular Discord button
     love.graphics.push()
     
+    local buttonScale = 1 + (db.hover and math.sin(ui.hover_effect) * 0.1 or 0)
+    love.graphics.translate(db.x + db.size/2, db.y + db.size/2)
+    love.graphics.scale(buttonScale, buttonScale)
+    love.graphics.translate(-(db.size/2), -(db.size/2))
+    
     -- Draw button glow when hovered
     if db.hover then
         for i = 1, 3 do
             local glow_alpha = 0.1 - (i * 0.03)
             love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.circle("fill", db.x + db.size/2, db.y + db.size/2, db.size/2 + i*2)
+            love.graphics.circle("fill", db.size/2, db.size/2, db.size/2 + i*2)
         end
     end
     
     -- Draw Discord icon
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(main_menu.discord_icon, db.x, db.y, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
+    love.graphics.draw(main_menu.discord_icon, 0, 0, 0, db.size/main_menu.discord_icon:getWidth(), db.size/main_menu.discord_icon:getHeight())
     
     love.graphics.pop()
 

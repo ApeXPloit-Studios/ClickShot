@@ -12,6 +12,7 @@ local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local save_slot_menu = require("save_slot_menu")
+local steam = require("steam")
 
 -- Constants
 local GAME_WIDTH = scale_manager.design_width - 280  -- Main game area width (minus upgrades panel)
@@ -35,7 +36,9 @@ local game = {
     buttons = {
         shop = { text = "Shop", hover = false },
         workbench = { text = "Workbench", hover = false }
-    }
+    },
+    _first_shot_given = false,
+    _tenk_achieved = false
 }
 game.shells = 0
 game.auto_cps = 0
@@ -168,6 +171,10 @@ function game.update(dt)
             if clicked then
                 game.shells = game.shells + shells_earned
                 saveGameState()
+                if not game._first_shot_given then
+                    steam.setAchievement(steam.achievements.FIRST_SHOT)
+                    game._first_shot_given = true
+                end
             end
         end
 
@@ -208,6 +215,11 @@ function game.update(dt)
     upgrades.update(dt, game)
     background.update(dt)
     game_background.update(dt, game.shells)
+
+    if game.shells >= 10000 and not game._tenk_achieved then
+        steam.setAchievement(steam.achievements.TEN_THOUSAND_SHELLS)
+        game._tenk_achieved = true
+    end
 end
 
 function game.draw()
@@ -425,6 +437,10 @@ function game.mousepressed(x, y, button)
             if clicked then
                 game.shells = game.shells + shells_earned
                 saveGameState()
+                if not game._first_shot_given then
+                    steam.setAchievement(steam.achievements.FIRST_SHOT)
+                    game._first_shot_given = true
+                end
             end
         end
         
