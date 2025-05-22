@@ -1,6 +1,7 @@
 local assets = require("assets")
 local scene = require("scene")
 local scale_manager = require("scale_manager")
+local controller = require("controller")
 
 local gun = {}
 
@@ -98,6 +99,18 @@ end
 function gun.isClicked(mx, my)
     if not sprite then return false end  -- Don't process clicks if no sprite is set
 
+    -- Use controller cursor position if using controller
+    local posX, posY
+    if not mx or not my then
+        if controller.usingController then
+            posX, posY = controller.cursorX, controller.cursorY
+        else
+            posX, posY = scale_manager.getMousePosition()
+        end
+    else
+        posX, posY = mx, my
+    end
+
     -- Get the gun draw position
     local draw_x = x - (gun_width * BASE_SCALE) / 2
     local draw_y = y - (gun_height * BASE_SCALE) / 2
@@ -110,8 +123,8 @@ function gun.isClicked(mx, my)
     local margin = 20
 
     -- Check if mouse is within extended hitbox bounds
-    return mx >= (draw_x - margin) and mx <= (draw_x + hitbox_width + margin) and 
-           my >= (draw_y - margin) and my <= (draw_y + hitbox_height + margin)
+    return posX >= (draw_x - margin) and posX <= (draw_x + hitbox_width + margin) and 
+           posY >= (draw_y - margin) and posY <= (draw_y + hitbox_height + margin)
 end
 
 function gun.shoot()

@@ -3,6 +3,7 @@ local save = require("save")
 local scene = require("scene")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
+local controller = require("controller")
 
 local save_slot_menu = {
     visible = false,
@@ -161,12 +162,12 @@ function save_slot_menu.update(dt)
     save_slot_menu.title_scale = 1 + 0.05 * math.sin(save_slot_menu.time * 2)
     
     -- Get mouse position in game coordinates
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition()
     
     -- Update button hover states
-    ui.updateButtonHover(save_slot_menu.left_button, mx, my)
-    ui.updateButtonHover(save_slot_menu.back_button, mx, my)
-    ui.updateButtonHover(save_slot_menu.delete_button, mx, my)
+    ui.updateButtonHover(save_slot_menu.left_button)
+    ui.updateButtonHover(save_slot_menu.back_button)
+    ui.updateButtonHover(save_slot_menu.delete_button)
     
     -- Update slot hover states
     for _, slot in ipairs(save_slot_menu.slots) do
@@ -272,7 +273,15 @@ function save_slot_menu.draw()
 end
 
 function save_slot_menu.mousepressed(x, y, button)
-    if not save_slot_menu.visible or button ~= 1 then return end
+    if not save_slot_menu.visible then return end
+    
+    -- Get controller-aware cursor position
+    local mx, my
+    if controller.usingController then
+        mx, my = controller.cursorX, controller.cursorY
+    else
+        mx, my = x, y
+    end
     
     -- Check if a slot was clicked
     for i, slot in ipairs(save_slot_menu.slots) do

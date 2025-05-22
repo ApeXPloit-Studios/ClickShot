@@ -5,6 +5,7 @@ local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local save_slot_menu = require("save_slot_menu")
+local controller = require("controller")
 
 local main_menu = {
     time = 0,
@@ -84,7 +85,7 @@ function main_menu.update(dt)
     ui.update(dt)
     
     -- Update button hover states
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition() -- Use UI cursor position
     local hover_found = false
     
     -- Update main buttons
@@ -93,7 +94,7 @@ function main_menu.update(dt)
         b._bounds = { x = b.x, y = b.y, w = b.w, h = b.h }
         
         local was_hover = b.hover
-        ui.updateButtonHover(b, mx, my)
+        ui.updateButtonHover(b)
         
         if b.hover and not was_hover then
             hover_found = true
@@ -105,14 +106,14 @@ function main_menu.update(dt)
     db._bounds = { x = db.x, y = db.y, w = db.size, h = db.size }
     
     local was_hover = db.hover
-    ui.updateButtonHover(db, mx, my)
+    ui.updateButtonHover(db)
     
     if db.hover and not was_hover then
         hover_found = true
     end
     
     -- Update mute button hover
-    ui.updateButtonHover(ui.mute_button, mx, my)
+    ui.updateButtonHover(ui.mute_button)
     ui.updateMuteButton(scene)
     
     -- Update settings if visible
@@ -210,21 +211,29 @@ function main_menu.draw()
 end
 
 function main_menu.mousepressed(x, y, button)
+    -- Get cursor position (controller or mouse)
+    local mx, my
+    if controller.usingController then
+        mx, my = controller.cursorX, controller.cursorY
+    else
+        mx, my = x, y
+    end
+    
     if button == 1 then
         -- Handle settings menu if visible
         if settings.visible then
-            settings.mousepressed(x, y, button)
+            settings.mousepressed(mx, my, button)
             return
         end
         
         -- Handle save slot menu if visible
         if save_slot_menu.visible then
-            save_slot_menu.mousepressed(x, y, button)
+            save_slot_menu.mousepressed(mx, my, button)
             return
         end
         
         -- Mute button
-        if ui.handleMuteButtonClick(x, y, button, scene) then
+        if ui.handleMuteButtonClick(mx, my, button, scene) then
             return
         end
         

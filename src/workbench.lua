@@ -5,6 +5,7 @@ local save = require("save")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local steam = require("steam")
+local controller = require("controller")
 local workbench = {}
 
 workbench.equipped_weapon = "pistol"  -- Default weapon
@@ -59,12 +60,12 @@ end
 function workbench.update(dt, game)
     if not game.workbench_visible then return end
     
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition()
     
     -- Update weapon button hover states
     for weapon, data in pairs(weapons.getAll()) do
         if data.owned and data._bounds then
-            ui.updateButtonHover(data, mx, my)
+            ui.updateButtonHover(data)
         end
     end
     
@@ -74,7 +75,7 @@ function workbench.update(dt, game)
         if weapon_data then
             for type, v in pairs(weapon_data.cosmetics) do
                 if v._bounds then
-                    ui.updateButtonHover(v, mx, my)
+                    ui.updateButtonHover(v)
                 end
             end
         end
@@ -237,13 +238,21 @@ function workbench.draw(game)
     end
 end
 
-function workbench.mousepressed(x, y, button, game)
+function workbench.mousepressed(mx, my, button, game)
     if not game.workbench_visible then return end
+    
+    -- Use controller-aware cursor position
+    local posX, posY
+    if controller.usingController then
+        posX, posY = controller.cursorX, controller.cursorY
+    else
+        posX, posY = mx, my
+    end
     
     -- Check weapon selection
     for weapon, data in pairs(weapons.getAll()) do
         if data.owned and data._bounds then
-            if ui.pointInRect(x, y, data._bounds) then
+            if ui.pointInRect(posX, posY, data._bounds) then
                 if workbench.expanded_weapon == weapon then
                     workbench.expanded_weapon = nil
                 else
@@ -264,7 +273,7 @@ function workbench.mousepressed(x, y, button, game)
         local weapon_data = weapons.getWeapon(workbench.expanded_weapon)
         if weapon_data then
             for type, v in pairs(weapon_data.cosmetics) do
-                if v._bounds and ui.pointInRect(x, y, v._bounds) then
+                if v._bounds and ui.pointInRect(posX, posY, v._bounds) then
                     if v.owned then
                         local was_equipped = workbench.equipped[workbench.expanded_weapon][type]
                         workbench.equipped[workbench.expanded_weapon][type] = not was_equipped

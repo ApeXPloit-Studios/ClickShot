@@ -103,16 +103,43 @@ end
 
 -- Check if point is inside a rectangle
 function ui.pointInRect(x, y, rect)
+    if not (x and y and rect and rect.x and rect.y and rect.w and rect.h) then
+        return false
+    end
+    
     return x >= rect.x and x <= rect.x + rect.w and
            y >= rect.y and y <= rect.y + rect.h
 end
 
+-- Get current cursor position (works with both mouse and controller)
+function ui.getCursorPosition()
+    local controller = require("controller")
+    -- Use controller cursor position if controller is active
+    if controller.usingController and controller.enabled then
+        return controller.cursorX, controller.cursorY
+    else
+        -- Otherwise use regular mouse position
+        return scale_manager.getMousePosition()
+    end
+end
+
 -- Update hover state for a button based on mouse position
 function ui.updateButtonHover(button, mx, my)
+    if not button then
+        return false
+    end
+    
+    -- If mx and my are not provided, get current cursor position
+    if not (mx and my) then
+        mx, my = ui.getCursorPosition()
+    end
+    
     if button._bounds then
         button.hover = ui.pointInRect(mx, my, button._bounds)
         return button.hover
     end
+    
+    button.hover = false
     return false
 end
 
@@ -129,11 +156,28 @@ end
 
 -- Handle mute button click, returns true if the button was clicked
 function ui.handleMuteButtonClick(x, y, button, scene)
+    -- Use provided coordinates or get cursor position
+    local posX, posY = x, y
+    if not (posX and posY) then
+        posX, posY = ui.getCursorPosition()
+    end
+    
     if button == 1 and ui.mute_button.hover then
         scene.toggleMute()
         return true
     end
     return false
+end
+
+-- Check if a button is clicked (for use with controller)
+function ui.isButtonClicked(button, x, y)
+    -- Use provided coordinates or get cursor position
+    local posX, posY = x, y
+    if not (posX and posY) then
+        posX, posY = ui.getCursorPosition()
+    end
+    
+    return button._bounds and ui.pointInRect(posX, posY, button._bounds)
 end
 
 -- Draw an animated title with scaling and glow effect

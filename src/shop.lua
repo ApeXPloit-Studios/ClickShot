@@ -3,6 +3,7 @@ local weapons = require("weapons")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local steam = require("steam")
+local controller = require("controller")
 local shop = {}
 
 -- Track which weapon's cosmetics are currently being shown
@@ -11,12 +12,12 @@ shop.selected_weapon = nil
 function shop.update(dt, game)
     if not game.shop_visible then return end
     
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition()
     
     -- Update weapon hover states
     for weapon, data in pairs(weapons.getAll()) do
         if data._bounds then
-            ui.updateButtonHover(data, mx, my)
+            ui.updateButtonHover(data)
         end
     end
     
@@ -26,7 +27,7 @@ function shop.update(dt, game)
         if data and data.owned then
         for type, v in pairs(data.cosmetics) do
             if v._bounds then
-                    ui.updateButtonHover(v, mx, my)
+                    ui.updateButtonHover(v)
                 end
             end
         end
@@ -34,7 +35,7 @@ function shop.update(dt, game)
     
     -- Update back button hover state
     if shop.back_button and shop.selected_weapon then
-        ui.updateButtonHover(shop.back_button, mx, my)
+        ui.updateButtonHover(shop.back_button)
     end
 end
 
@@ -205,12 +206,20 @@ function shop.draw(game)
     end
 end
 
-function shop.mousepressed(x, y, button, game)
+function shop.mousepressed(mx, my, button, game)
     if not game.shop_visible then return end
+    
+    -- Use controller-aware cursor position
+    local posX, posY
+    if controller.usingController then
+        posX, posY = controller.cursorX, controller.cursorY
+    else
+        posX, posY = mx, my
+    end
     
     -- Handle back button when viewing cosmetics
     if shop.selected_weapon then
-        if shop.back_button and ui.pointInRect(x, y, shop.back_button._bounds) then
+        if shop.back_button and ui.pointInRect(posX, posY, shop.back_button._bounds) then
             shop.selected_weapon = nil
             return
         end
@@ -221,7 +230,7 @@ function shop.mousepressed(x, y, button, game)
     
         if data and data.owned then
             for type, v in pairs(data.cosmetics) do
-                if v._bounds and ui.pointInRect(x, y, v._bounds) then
+                if v._bounds and ui.pointInRect(posX, posY, v._bounds) then
                     if not v.owned and game.shells >= v.cost then
                         game.shells = game.shells - v.cost
                         weapons.setCosmeticOwned(weapon, type, true)
@@ -236,7 +245,7 @@ function shop.mousepressed(x, y, button, game)
         -- Check weapon purchases
         for weapon, data in pairs(weapons.getAll()) do
             -- Buy weapon
-            if data._bounds and ui.pointInRect(x, y, data._bounds) then
+            if data._bounds and ui.pointInRect(posX, posY, data._bounds) then
                 if not data.owned and game.shells >= data.cost then
                     game.shells = game.shells - data.cost
                     data.owned = true
@@ -247,7 +256,7 @@ function shop.mousepressed(x, y, button, game)
             end
             
             -- View attachments button
-            if data._attach_bounds and ui.pointInRect(x, y, data._attach_bounds) then
+            if data._attach_bounds and ui.pointInRect(posX, posY, data._attach_bounds) then
                 shop.selected_weapon = weapon
                 return
             end

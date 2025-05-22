@@ -9,6 +9,7 @@ local pause_menu = require("pause_menu")
 local scale_manager = require("scale_manager")
 local settings = require("settings")
 local save_slot_menu = require("save_slot_menu")
+local controller = require("controller")
 
 function love.load()
     -- Initialize Steamworks API
@@ -27,6 +28,9 @@ function love.load()
     main_menu.load()
     game.load()
     save_slot_menu.load()
+    
+    -- Initialize controller support
+    controller.load()
 end
 
 -- Handle scene-specific callbacks
@@ -46,6 +50,7 @@ end
 
 function love.update(dt)
     steam.update()
+    controller.update(dt)
     handleSceneCallback("update", dt)
 end
 
@@ -53,6 +58,7 @@ function love.draw()
     -- Apply scaling
     scale_manager.start()
     handleSceneCallback("draw")
+    controller.draw() -- Draw the controller cursor
     scale_manager.finish()
 end
 
@@ -79,6 +85,9 @@ function love.mousemoved(x, y, dx, dy, istouch)
     local gameDX = dx / scale_manager.scale_x
     local gameDY = dy / scale_manager.scale_y
     
+    -- Notify controller module about mouse movement
+    controller.mousemoved(gameX, gameY, gameDX, gameDY)
+    
     if handleSceneCallback("mousemoved", gameX, gameY, gameDX, gameDY, istouch) then
         return
     end
@@ -104,6 +113,23 @@ end
 function love.resize(width, height)
     scale_manager.update()
     save_slot_menu.handleResize()
+end
+
+-- Controller event handlers
+function love.joystickadded(joystick)
+    controller.joystickadded(joystick)
+end
+
+function love.joystickremoved(joystick)
+    controller.joystickremoved(joystick)
+end
+
+function love.gamepadpressed(joystick, button)
+    controller.gamepadpressed(joystick, button)
+end
+
+function love.gamepadreleased(joystick, button)
+    controller.gamepadreleased(joystick, button)
 end
 
 function love.handlers.gameReloadSaveData()

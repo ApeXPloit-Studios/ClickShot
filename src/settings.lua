@@ -264,7 +264,7 @@ function settings.update(dt)
     -- Update UI hover effect
     ui.update(dt)
     
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition()
     
     -- Update mute button hover
     ui.updateButtonHover(ui.mute_button, mx, my)
@@ -453,28 +453,38 @@ end
 function settings.mousepressed(x, y, button)
     if not settings.visible or button ~= 1 then return end
 
+    -- Get cursor position (support both mouse and controller)
+    local mx, my
+    local controller = require("controller")
+    
+    if controller.usingController then
+        mx, my = controller.cursorX, controller.cursorY
+    else
+        mx, my = x, y
+    end
+
     -- Check mute button
-    if ui.handleMuteButtonClick(x, y, button, scene) then
+    if ui.handleMuteButtonClick(mx, my, button, scene) then
         return
     end
     
     -- Check tab buttons
     for name, tab_button in pairs(settings.tab_buttons) do
-        if tab_button._bounds and ui.pointInRect(x, y, tab_button._bounds) then
+        if tab_button._bounds and ui.pointInRect(mx, my, tab_button._bounds) then
             settings.current_tab = name
             return
         end
     end
     
     -- Check Back button
-    if ui.pointInRect(x, y, settings.back_button._bounds) then
+    if ui.pointInRect(mx, my, settings.back_button._bounds) then
         settings.visible = false
         settings.save()
         return
     end
     
     -- Check Apply button
-    if ui.pointInRect(x, y, settings.apply_button._bounds) then
+    if ui.pointInRect(mx, my, settings.apply_button._bounds) then
         if settings.current_tab == "graphics" then
             applyGraphicsSettings()
         end
@@ -486,9 +496,9 @@ function settings.mousepressed(x, y, button)
     if settings.current_tab == "audio" then
         -- Check sliders
         for name, slider in pairs(settings.sliders) do
-            if slider._bounds and ui.pointInRect(x, y, slider._bounds) then
+            if slider._bounds and ui.pointInRect(mx, my, slider._bounds) then
                 slider.dragging = true
-                local relativeX = x - slider._bounds.x
+                local relativeX = mx - slider._bounds.x
                 slider.value = math.max(0, math.min(1, relativeX / slider._bounds.w))
                 
                 -- Apply volume changes in real-time
@@ -498,20 +508,20 @@ function settings.mousepressed(x, y, button)
         end
     else -- Graphics tab
         -- Check resolution chooser
-        if ui.pointInRect(x, y, settings.resolution_chooser._bounds) then
+        if ui.pointInRect(mx, my, settings.resolution_chooser._bounds) then
             cycleResolution()
             return
         end
         
         -- Check fullscreen button
-        if ui.pointInRect(x, y, settings.fullscreen_button._bounds) then
+        if ui.pointInRect(mx, my, settings.fullscreen_button._bounds) then
             settings.fullscreen = not settings.fullscreen
             settings.fullscreen_button.text = "Fullscreen: " .. (settings.fullscreen and "On" or "Off")
             return
         end
         
         -- Check vsync button
-        if ui.pointInRect(x, y, settings.vsync_button._bounds) then
+        if ui.pointInRect(mx, my, settings.vsync_button._bounds) then
             settings.vsync = not settings.vsync
             settings.vsync_button.text = "VSync: " .. (settings.vsync and "On" or "Off")
             return

@@ -38,7 +38,8 @@ local game = {
         workbench = { text = "Workbench", hover = false }
     },
     _first_shot_given = false,
-    _tenk_achieved = false
+    _tenk_achieved = false,
+    triggerReleased = true  -- Track if trigger has been released since last shot
 }
 game.shells = 0
 game.auto_cps = 0
@@ -158,15 +159,18 @@ function game.update(dt)
     end
 
     -- Update button hover states
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition() -- Use UI function that works with both mouse and controller
     for _, button in pairs(game.buttons) do
-        ui.updateButtonHover(button, mx, my)
+        ui.updateButtonHover(button)
     end
 
     -- Check for gamepad input
     if game.gamepad then
-        -- A button or right trigger to shoot
-        if game.gamepad:isGamepadDown("a") or game.gamepad:getAxis(5) > 0.5 then
+        -- Check trigger state
+        local triggerValue = game.gamepad:getAxis(6)
+        
+        -- Only right trigger to shoot and must be released between shots
+        if triggerValue > 0.5 and game.triggerReleased then
             local clicked, shells_earned = gun.shoot()
             if clicked then
                 game.shells = game.shells + shells_earned
@@ -175,7 +179,12 @@ function game.update(dt)
                     steam.setAchievement(steam.achievements.FIRST_SHOT)
                     game._first_shot_given = true
                 end
+                -- Mark trigger as used until released
+                game.triggerReleased = false
             end
+        elseif triggerValue < 0.3 then
+            -- Reset trigger state when released enough
+            game.triggerReleased = true
         end
 
         -- D-pad navigation

@@ -2,6 +2,7 @@ local assets = require("assets")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local steam = require("steam")
+local controller = require("controller")
 local upgrades = {
     list = {},
     selected_index = 1,
@@ -136,10 +137,10 @@ function upgrades.update(dt, game)
     end
     
     -- Update hover states
-    local mx, my = scale_manager.getMousePosition()
+    local mx, my = ui.getCursorPosition()
     for _, upgrade in ipairs(upgrades.list) do
         if upgrade._bounds then
-            ui.updateButtonHover(upgrade, mx, my)
+            ui.updateButtonHover(upgrade)
         end
     end
 
@@ -153,9 +154,17 @@ end
 function upgrades.mousepressed(x, y, button, game)
     if button ~= 1 then return end
 
+    -- Use controller-aware cursor position
+    local posX, posY
+    if controller.usingController then
+        posX, posY = controller.cursorX, controller.cursorY
+    else
+        posX, posY = x, y
+    end
+
     for i, upgrade in ipairs(upgrades.list) do
         local b = upgrade._bounds
-        if b and ui.pointInRect(x, y, b) then
+        if b and ui.pointInRect(posX, posY, b) then
             upgrades.buyUpgrade(i, game)
             break
         end

@@ -7,6 +7,7 @@ local settings = require("settings")
 local ui = require("ui")
 local scale_manager = require("scale_manager")
 local save_slot_menu = require("save_slot_menu")
+local controller = require("controller")
 
 local pause_menu = {
     visible = false,
@@ -88,9 +89,8 @@ function pause_menu.update(dt)
     ui.update(dt)
     
     -- Update button hover states
-    local mx, my = scale_manager.getMousePosition()
     for _, b in ipairs(pause_menu.buttons) do
-        ui.updateButtonHover(b, mx, my)
+        ui.updateButtonHover(b)
     end
 end
 
@@ -143,15 +143,23 @@ end
 function pause_menu.mousepressed(mx, my, button)
     if not pause_menu.visible or button ~= 1 then return end
 
+    -- Get cursor position (use controller position if using controller)
+    local posX, posY
+    if controller.usingController then
+        posX, posY = controller.cursorX, controller.cursorY
+    else
+        posX, posY = mx, my
+    end
+
     -- Check settings first
     if settings.visible then
-        settings.mousepressed(mx, my, button)
+        settings.mousepressed(posX, posY, button)
         return
     end
 
     -- Check save slot menu
     if save_slot_menu.visible then
-        save_slot_menu.mousepressed(mx, my, button)
+        save_slot_menu.mousepressed(posX, posY, button)
         return
     end
 
