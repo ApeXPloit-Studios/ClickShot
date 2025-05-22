@@ -47,7 +47,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE.txt) f
 - **LÖVE2D:** Game framework
 
 
-**Coming Soon to Steam, Apple App Store, and Google Play!**
+**Coming Soon to [Steam](https://store.steampowered.com/app/3655710/ClickShot/), Apple App Store, and Google Play!**
 
 Enjoy playing ClickShot! If you have any questions or feedback, feel free to open an issue or contact me at aspenini@apexploitstudios.org
 
