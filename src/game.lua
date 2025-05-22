@@ -9,9 +9,13 @@ local background = require("background")
 local game_background = require("game_background")
 local scene = require("scene")
 local settings = require("settings")
+local ui = require("ui")
+local scale_manager = require("scale_manager")
+local save_slot_menu = require("save_slot_menu")
+local steam = require("steam")
 
 -- Constants
-local GAME_WIDTH = 1000
+local GAME_WIDTH = scale_manager.design_width - 280  -- Main game area width (minus upgrades panel)
 local UPGRADES_PANEL_WIDTH = 280
 local BUTTON_WIDTH = 150
 local BUTTON_HEIGHT = 40
@@ -26,11 +30,16 @@ local game = {
     gamepad = nil,
     selected_button = 1,  -- 1 = gun, 2 = shop, 3 = workbench
     button_cooldown = 0,
-    hover_effect = 0,
+    save_cooldown = 0,  -- Cooldown timer for saves
+    save_interval = 2,  -- seconds after every save
+    save_pending = false,  -- indicate a save is needed
     buttons = {
         shop = { text = "Shop", hover = false },
         workbench = { text = "Workbench", hover = false }
-    }
+    },
+    _first_shot_given = false,
+    _tenk_achieved = false,
+    triggerReleased = true  -- Track if trigger has been released since last shot
 }
 game.shells = 0
 game.auto_cps = 0
@@ -40,11 +49,32 @@ function game.load()
     gun.load()
     background.load()
     game_background.load()
+    save_slot_menu.load()
     
     -- Load saved data
     local saved = save.load()
     game.shells = saved.shells
-    shop.cosmetics = saved.cosmetics
+    
+    -- Update weapons from save data
+    local weapons_module = require("weapons")
+    if saved.cosmetics then
+        -- Update weapon ownership and cosmetics
+        for weapon_name, weapon_data in pairs(saved.cosmetics) do
+            if weapons_module.data[weapon_name] then
+                weapons_module.data[weapon_name].owned = weapon_data.owned or false
+                
+                -- Update cosmetics ownership
+                if weapon_data.cosmetics then
+                    for cosmetic_name, cosmetic_data in pairs(weapon_data.cosmetics) do
+                        if weapons_module.data[weapon_name].cosmetics[cosmetic_name] then
+                            weapons_module.data[weapon_name].cosmetics[cosmetic_name].owned = 
+                                cosmetic_data.owned or false
+                        end
+                    end
+                end
+            end
+        end
+    end
     
     -- Load workbench data
     workbench.load()
@@ -62,10 +92,12 @@ function game.load()
                 -- Clamp to [0, 100000] to prevent corruption
                 count = math.max(0, math.min(100000, math.floor(count)))
                 upgrade.count = count
-                upgrade:effect(game)  -- Apply the upgrade effect
             end
         end
     end
+    
+    -- Apply all upgrade effects
+    upgrades.applyAllEffects(game)
 
     -- Initialize gamepad
     local joysticks = love.joystick.getJoysticks()
@@ -76,18 +108,49 @@ end
 
 -- Helper function to save game state
 local function saveGameState()
+    game.save_pending = true
+end
+
+function game.update(dt)
+    -- Check if a save was requested from the save slot menu
+    if scene.isSavePending() then
     save.update(
         game.shells, 
         shop.cosmetics,
         workbench.equipped,
         workbench.equipped_weapon
     )
-end
+        scene.clearSavePending()
+    end
+    
+    -- Check if a data reload was requested
+    if scene.isDataReloadPending() then
+        game.reloadSaveData()
+        scene.clearDataReloadPending()
+    end
 
-function game.update(dt)
     if pause_menu.visible then
         pause_menu.update(dt)
         return
+    end
+
+    if save_slot_menu.visible then
+        save_slot_menu.update(dt)
+        return
+    end
+
+    -- Update save cooldown and perform save if needed
+    if game.save_cooldown > 0 then
+        game.save_cooldown = game.save_cooldown - dt
+    elseif game.save_pending then
+        save.update(
+            game.shells, 
+            shop.cosmetics,
+            workbench.equipped,
+            workbench.equipped_weapon
+        )
+        game.save_pending = false
+        game.save_cooldown = game.save_interval
     end
 
     -- Update button cooldown
@@ -95,36 +158,33 @@ function game.update(dt)
         game.button_cooldown = game.button_cooldown - dt
     end
 
-    -- Update hover effect
-    game.hover_effect = game.hover_effect + dt * 2
-    if game.hover_effect > math.pi * 2 then
-        game.hover_effect = 0
-    end
-
     -- Update button hover states
-    local mx, my = love.mouse.getPosition()
+    local mx, my = ui.getCursorPosition() -- Use UI function that works with both mouse and controller
     for _, button in pairs(game.buttons) do
-        if button._bounds then
-            local was_hover = button.hover
-            button.hover = mx >= button._bounds.x and mx <= button._bounds.x + button._bounds.w and
-                          my >= button._bounds.y and my <= button._bounds.y + button._bounds.h
-            
-            -- Could add hover sound here
-            if button.hover and not was_hover then
-                -- love.audio.play(assets.sounds.hover)
-            end
-        end
+        ui.updateButtonHover(button)
     end
 
     -- Check for gamepad input
     if game.gamepad then
-        -- A button or right trigger to shoot
-        if game.gamepad:isGamepadDown("a") or game.gamepad:getAxis(5) > 0.5 then
-            local clicked = gun.shoot()
+        -- Check trigger state
+        local triggerValue = game.gamepad:getAxis(6)
+        
+        -- Only right trigger to shoot and must be released between shots
+        if triggerValue > 0.5 and game.triggerReleased then
+            local clicked, shells_earned = gun.shoot()
             if clicked then
-                game.shells = game.shells + 1
+                game.shells = game.shells + shells_earned
                 saveGameState()
+                if not game._first_shot_given then
+                    steam.setAchievement(steam.achievements.FIRST_SHOT)
+                    game._first_shot_given = true
+                end
+                -- Mark trigger as used until released
+                game.triggerReleased = false
             end
+        elseif triggerValue < 0.3 then
+            -- Reset trigger state when released enough
+            game.triggerReleased = true
         end
 
         -- D-pad navigation
@@ -164,44 +224,27 @@ function game.update(dt)
     upgrades.update(dt, game)
     background.update(dt)
     game_background.update(dt, game.shells)
-end
 
--- Helper function to draw a button
-local function drawButton(button, x, y, width, height)
-    local buttonScale = 1 + (button.hover and math.sin(game.hover_effect) * 0.1 or 0)
-    
-    love.graphics.push()
-    love.graphics.translate(x + width/2, y + height/2)
-    love.graphics.scale(buttonScale, buttonScale)
-    love.graphics.translate(-width/2, -height/2)
-    
-    -- Draw button glow when hovered
-    if button.hover then
-        for i = 1, 3 do
-            local glow_alpha = 0.1 - (i * 0.03)
-            love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-            love.graphics.rectangle("fill", -i*2, -i*2, width + i*4, height + i*4, 10 + i, 10 + i)
-        end
+    if game.shells >= 10000 and not game._tenk_achieved then
+        steam.setAchievement(steam.achievements.TEN_THOUSAND_SHELLS)
+        game._tenk_achieved = true
     end
-    
-    love.graphics.setColor(button.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2})
-    love.graphics.rectangle("fill", 0, 0, width, height, 6, 6)
-    love.graphics.setColor(0.5, 0.5, 0.5)
-    love.graphics.rectangle("line", 0, 0, width, height, 6, 6)
-    
-    -- Draw text with shadow when hovered
-    if button.hover then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.printf(button.text, 2, 12, width, "center")
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(button.text, 0, 10, width, "center")
-    love.graphics.pop()
 end
 
 function game.draw()
+    -- Draw save slot menu if visible
+    if save_slot_menu.visible then
+        save_slot_menu.draw()
+        return
+    end
+
     -- Draw game area (slightly smaller to accommodate upgrades panel)
-    love.graphics.setScissor(0, 0, GAME_WIDTH, 720)
+    local x1, y1 = scale_manager.toWindowCoords(0, 0)
+    local x2, y2 = scale_manager.toWindowCoords(GAME_WIDTH, 720)
+    local scissor_width = x2 - x1
+    local scissor_height = y2 - y1
+    
+    love.graphics.setScissor(x1, y1, scissor_width, scissor_height)
     
     -- Draw backgrounds
     game_background.draw()
@@ -212,19 +255,19 @@ function game.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Shells: " .. math.floor(game.shells), 20, 20)
     
+    -- Draw current weapon power
+    local power = gun.getPower() or 1
+    love.graphics.print("Multiplier: " .. power, 20, 60)
+    
     -- Center the gun
     local oldX = gun.getPosition()
     gun.setPosition(GAME_WIDTH / 2)
     gun.draw()
-    if game.debug then
-        gun.drawHitbox()
-    end
     gun.setPosition(oldX)
     
-    -- Draw menu buttons at bottom
-    local buttonY = 720 - BUTTON_HEIGHT - 20  -- 20px padding from bottom
     local totalButtonWidth = (BUTTON_WIDTH * 2) + BUTTON_SPACING
     local startX = (GAME_WIDTH - totalButtonWidth) / 2
+    local buttonY = scale_manager.design_height - BUTTON_HEIGHT - 20  -- Define buttonY
 
     -- Store button bounds for click detection
     game.buttons.shop._bounds = {
@@ -241,7 +284,7 @@ function game.draw()
     }
 
     -- Draw shop button
-    drawButton(
+    ui.drawButton(
         game.buttons.shop, 
         startX, 
         buttonY, 
@@ -250,7 +293,7 @@ function game.draw()
     )
 
     -- Draw workbench button
-    drawButton(
+    ui.drawButton(
         game.buttons.workbench, 
         startX + BUTTON_WIDTH + BUTTON_SPACING, 
         buttonY, 
@@ -261,9 +304,9 @@ function game.draw()
     love.graphics.setScissor()
     
     -- Draw upgrades panel (always visible)
-    local panelX = 1280 - UPGRADES_PANEL_WIDTH
+    local panelX = scale_manager.design_width - UPGRADES_PANEL_WIDTH
     love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.rectangle("fill", panelX, 0, UPGRADES_PANEL_WIDTH, 720)
+    love.graphics.rectangle("fill", panelX, 0, UPGRADES_PANEL_WIDTH, scale_manager.design_height)
     
     -- Draw upgrades title
     love.graphics.setColor(1, 1, 1)
@@ -336,10 +379,14 @@ function game.keypressed(key)
         game.toggle_workbench()
         saveGameState()
     end
-    if key == "f3" then game.debug = not game.debug end
 end
 
 function game.mousepressed(x, y, button)
+    if save_slot_menu.visible then
+        save_slot_menu.mousepressed(x, y, button)
+        return
+    end
+
     if pause_menu.visible then
         pause_menu.mousepressed(x, y, button)
         return
@@ -358,9 +405,7 @@ function game.mousepressed(x, y, button)
             -- Play click sound with correct volume
             local click = assets.sounds.click
             if click then
-                local sound_instance = click:clone()
-                scene.applySfxVolume(sound_instance)
-                sound_instance:play()
+                scene.playSound(click)
             end
             
             game.toggle_shop()
@@ -369,9 +414,7 @@ function game.mousepressed(x, y, button)
             -- Play click sound with correct volume
             local click = assets.sounds.click
             if click then
-                local sound_instance = click:clone()
-                scene.applySfxVolume(sound_instance)
-                sound_instance:play()
+                scene.playSound(click)
             end
             
             game.toggle_workbench()
@@ -392,14 +435,125 @@ function game.mousepressed(x, y, button)
 
     -- Check gun clicks last, and only if we're in the game area
     if button == 1 and x < love.graphics.getWidth() - UPGRADES_PANEL_WIDTH then
-        if gun.isClicked(x, y) then
-            local clicked = gun.shoot()
+        local mx, my = scale_manager.getMousePosition()
+        
+        -- Position gun in the same place as when drawing it
+        local oldX = gun.getPosition()
+        gun.setPosition(GAME_WIDTH / 2)
+        
+        if gun.isClicked(mx, my) then
+            local clicked, shells_earned = gun.shoot()
             if clicked then
-                game.shells = game.shells + 1
+                game.shells = game.shells + shells_earned
                 saveGameState()
+                if not game._first_shot_given then
+                    steam.setAchievement(steam.achievements.FIRST_SHOT)
+                    game._first_shot_given = true
+                end
+            end
+        end
+        
+        -- Restore original gun position
+        gun.setPosition(oldX)
+    end
+end
+
+-- Handle mouse wheel events
+function game.wheelmoved(x, y)
+    -- Forward wheel events to appropriate modules
+    if game.workbench_visible then
+        workbench.wheelmoved(x, y)
+    elseif game.shop_visible then
+        -- Could add shop scrolling here if needed later
+    end
+end
+
+-- Load/reload saved data from the active slot
+function game.reloadSaveData()
+    local active_slot = save.getActiveSlot()
+    local saved = save.load(active_slot)
+    
+    -- Update game state with loaded data
+    game.shells = saved.shells
+    
+    -- Update weapons from save data
+    local weapons_module = require("weapons")
+    if saved.cosmetics then
+        -- Update weapon ownership and cosmetics
+        for weapon_name, weapon_data in pairs(saved.cosmetics) do
+            if weapons_module.data[weapon_name] then
+                weapons_module.data[weapon_name].owned = weapon_data.owned or false
+                
+                -- Update cosmetics ownership
+                if weapon_data.cosmetics then
+                    for cosmetic_name, cosmetic_data in pairs(weapon_data.cosmetics) do
+                        if weapons_module.data[weapon_name].cosmetics[cosmetic_name] then
+                            weapons_module.data[weapon_name].cosmetics[cosmetic_name].owned = 
+                                cosmetic_data.owned or false
+                        end
+                    end
+                end
             end
         end
     end
+    
+    -- Reset upgrades
+    for _, upgrade in ipairs(upgrades.list) do
+        upgrade.count = 0
+    end
+    
+    -- Load upgrades if they exist in save data
+    if saved.upgrades then
+        for i, upgrade in ipairs(upgrades.list) do
+            if saved.upgrades[i] and saved.upgrades[i].count then
+                local count = tonumber(saved.upgrades[i].count) or 0
+                -- Clamp to [0, 100000] to prevent corruption
+                count = math.max(0, math.min(100000, math.floor(count)))
+                upgrade.count = count
+            end
+        end
+    end
+    
+    -- Reload workbench equipped items
+    -- First initialize default equipment
+    workbench.initEquipped()
+    
+    -- Then load saved equipment data
+    if saved.equipped then
+        for weapon, attachments in pairs(saved.equipped) do
+            if workbench.equipped[weapon] then
+                for attachment_type, equipped in pairs(attachments) do
+                    if workbench.equipped[weapon][attachment_type] ~= nil then
+                        workbench.equipped[weapon][attachment_type] = equipped
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Set equipped weapon
+    if saved.equipped_weapon then
+        workbench.equipped_weapon = saved.equipped_weapon
+    else
+        workbench.equipped_weapon = "pistol"  -- Default to pistol
+    end
+    
+    -- Update the gun sprite
+    if workbench.updateGunSprite then
+        workbench.updateGunSprite()
+    end
+    
+    -- Apply all upgrade effects
+    upgrades.applyAllEffects(game)
+end
+
+-- Handle LÖVE events
+function game.handleEvent(name)
+    if name == "gameReloadSaveData" then
+        game.reloadSaveData()
+        return true
+    end
+    return false
 end
 
 return game

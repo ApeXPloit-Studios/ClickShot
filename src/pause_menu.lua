@@ -4,6 +4,10 @@ local save = require("save")
 local shop = require("shop")
 local background_effect = require("background_effect")
 local settings = require("settings")
+local ui = require("ui")
+local scale_manager = require("scale_manager")
+local save_slot_menu = require("save_slot_menu")
+local controller = require("controller")
 
 local pause_menu = {
     visible = false,
@@ -14,6 +18,11 @@ local pause_menu = {
 
 -- Define button actions separately
 local function resumeAction()
+    pause_menu.visible = false
+end
+
+local function saveGameAction()
+    save_slot_menu.show("save")
     pause_menu.visible = false
 end
 
@@ -31,6 +40,7 @@ end
 -- Initialize buttons
 pause_menu.buttons = {
     { text = "Resume", hover = false, action = resumeAction },
+    { text = "Save Game", hover = false, action = saveGameAction },
     { text = "Settings", hover = false, action = function() settings.toggle() end },
     { text = "Main Menu", hover = false, action = mainMenuAction }
 }
@@ -45,7 +55,7 @@ function pause_menu.toggle()
     if pause_menu.visible then
         -- Initialize button bounds when menu becomes visible
         local w, h = 400, 300
-        local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+        local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
         local spacing = 60
         local startY = y + 50
         local buttonH = 50
@@ -70,14 +80,17 @@ function pause_menu.update(dt)
     -- Update settings
     settings.update(dt)
     
+    -- Update save slot menu
+    if save_slot_menu.visible then
+        save_slot_menu.update(dt)
+    end
+    
+    -- Update UI hover effect
+    ui.update(dt)
+    
     -- Update button hover states
-    local mx, my = love.mouse.getPosition()
     for _, b in ipairs(pause_menu.buttons) do
-        if b._bounds then
-            local was_hover = b.hover
-            b.hover = mx >= b._bounds.x and mx <= b._bounds.x + b._bounds.w and 
-                     my >= b._bounds.y and my <= b._bounds.y + b._bounds.h
-        end
+        ui.updateButtonHover(b)
     end
 end
 
@@ -87,7 +100,7 @@ function pause_menu.draw()
     -- Draw background effect with overlay
     background_effect.draw()
     love.graphics.setColor(0, 0, 0, 0.5)
-    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+    love.graphics.rectangle("fill", 0, 0, scale_manager.design_width, scale_manager.design_height)
 
     -- Draw settings if visible and return (modal)
     if settings.visible then
@@ -95,9 +108,15 @@ function pause_menu.draw()
         return
     end
 
+    -- Draw save slot menu if visible and return 
+    if save_slot_menu.visible then
+        save_slot_menu.draw()
+        return
+    end
+
     -- Draw menu
     local w, h = 400, 300
-    local x, y = (love.graphics.getWidth() - w) / 2, (love.graphics.getHeight() - h) / 2
+    local x, y = (scale_manager.design_width - w) / 2, (scale_manager.design_height - h) / 2
 
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, w, h, 10, 10)
@@ -106,80 +125,49 @@ function pause_menu.draw()
     love.graphics.setFont(assets.fonts.bold)
     love.graphics.setColor(1, 1, 1)
     
-    local title = "Paused"
-    local tw = assets.fonts.bold:getWidth(title)
-    local th = assets.fonts.bold:getHeight()
-    
-    love.graphics.push()
-    love.graphics.translate(x + w/2, y + 10 + th/2)
-    love.graphics.scale(pause_menu.title_scale, pause_menu.title_scale)
-    love.graphics.translate(-tw/2, -th/2)
-    
-    -- Draw title with glow effect
-    for i = 1, 5 do
-        local alpha = 1 - (i * 0.2)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.print(title, i, i)
-    end
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print(title, 0, 0)
-    
-    love.graphics.pop()
+    ui.drawAnimatedTitle(
+        "Paused",
+        x + w/2,
+        y + 10 + assets.fonts.bold:getHeight()/2,
+        pause_menu.title_scale,
+        assets.fonts.bold,
+        {centerX = true, centerY = true}
+    )
 
     -- Draw buttons
     for _, b in ipairs(pause_menu.buttons) do
-            -- Button background with hover effect
-            local hover_scale = b.hover and 1.1 or 1
-            local hover_color = b.hover and {0.4, 0.4, 0.4} or {0.2, 0.2, 0.2}
-            love.graphics.push()
-            love.graphics.translate(b._bounds.x + b._bounds.w/2, b._bounds.y + b._bounds.h/2)
-            love.graphics.scale(hover_scale, hover_scale)
-            love.graphics.translate(-b._bounds.w/2, -b._bounds.h/2)
-            -- Draw button glow when hovered
-            if b.hover then
-                for i = 1, 3 do
-                    local glow_alpha = 0.1 - (i * 0.03)
-                    love.graphics.setColor(0.5, 0.5, 1, glow_alpha)
-                    love.graphics.rectangle("fill", -i*2, -i*2, b._bounds.w + i*4, b._bounds.h + i*4, 10 + i, 10 + i)
-                end
-            end
-            -- Draw button background with rounded corners
-            love.graphics.setColor(hover_color[1], hover_color[2], hover_color[3])
-            love.graphics.rectangle("fill", 0, 0, b._bounds.w, b._bounds.h, 10, 10)
-            -- Draw button border
-            love.graphics.setColor(0.5, 0.5, 0.5)
-            love.graphics.rectangle("line", 0, 0, b._bounds.w, b._bounds.h, 10, 10)
-            -- Draw button text with shadow when hovered
-            if b.hover then
-                love.graphics.setColor(0, 0, 0, 0.5)
-                love.graphics.print(b.text, (b._bounds.w - assets.fonts.bold:getWidth(b.text)) / 2 + 2, 
-                                  (b._bounds.h - assets.fonts.bold:getHeight()) / 2 + 2)
-            end
-            -- Draw button text
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.print(b.text, (b._bounds.w - assets.fonts.bold:getWidth(b.text)) / 2, 
-                              (b._bounds.h - assets.fonts.bold:getHeight()) / 2)
-            love.graphics.pop()
+        ui.drawButton(b, b._bounds.x, b._bounds.y, b._bounds.w, b._bounds.h)
     end
 end
 
 function pause_menu.mousepressed(mx, my, button)
     if not pause_menu.visible or button ~= 1 then return end
 
+    -- Get cursor position (use controller position if using controller)
+    local posX, posY
+    if controller.usingController then
+        posX, posY = controller.cursorX, controller.cursorY
+    else
+        posX, posY = mx, my
+    end
+
     -- Check settings first
     if settings.visible then
-        settings.mousepressed(mx, my, button)
+        settings.mousepressed(posX, posY, button)
+        return
+    end
+
+    -- Check save slot menu
+    if save_slot_menu.visible then
+        save_slot_menu.mousepressed(posX, posY, button)
         return
     end
 
     for _, b in ipairs(pause_menu.buttons) do
         if b._bounds and b.hover then
             -- Play click sound with correct volume
-            local click = assets.sounds.click
-            if click then
-                local sound_instance = click:clone()
-                scene.applySfxVolume(sound_instance)
-                sound_instance:play()
+            if assets.sounds.click then
+                scene.playSound(assets.sounds.click)
             end
             
             b.action()

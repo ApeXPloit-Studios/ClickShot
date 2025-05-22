@@ -11,23 +11,14 @@ local function safeLoad(loadFn, errorMsg)
 end
 
 function assets.load()
-    -- Gun (default sprite)
-    local gun_img = safeLoad(function()
-        local img = love.graphics.newImage("assets/images/pistol/fire_pistol.png")
-        img:setFilter("nearest", "nearest")
-        return img
-    end, "Failed to load gun image")
-
-    assets.images = {
-        gun = gun_img
-    }
-
+    -- Sound Efects
     assets.sounds = {
         click = safeLoad(function()
             return love.audio.newSource("assets/sounds/click.wav", "static")
         end, "Failed to load click sound")
     }
 
+    -- Fonts
     assets.fonts = {
         regular = safeLoad(function()
             return love.graphics.newFont("assets/fonts/PixelifySans-Regular.ttf", 24)

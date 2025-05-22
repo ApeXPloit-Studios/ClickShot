@@ -1,11 +1,13 @@
 local assets = require("assets")
 local scene = require("scene")
+local scale_manager = require("scale_manager")
+local controller = require("controller")
 
 local gun = {}
 
 -- Constants
-local DEFAULT_X = 400
-local DEFAULT_Y = 300
+local DEFAULT_X = scale_manager.design_width / 2
+local DEFAULT_Y = scale_manager.design_height / 2.4
 local TOTAL_FRAMES = 12
 local BASE_SCALE = 4.0  -- Increased from 2.5 to 4.0 for larger gun
 local MIN_FRAME_TIME = 1 / 30  -- Increased from 24 to 30 for smoother animation
@@ -27,6 +29,9 @@ local gun_width, gun_height
 local click_times = {}
 local last_click_time = 0
 local animating = false
+
+-- Power system
+local current_power = 1  -- Default power value
 
 -- Hitbox adjustment (percentage of sprite size)
 local hitbox = {
@@ -91,42 +96,43 @@ function gun.draw()
     )
 end
 
--- Draw hitbox for debugging
-function gun.drawHitbox()
-    if not sprite then return end
-    
-    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
-    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
-    
-    love.graphics.setColor(1, 0, 0, 0.5)
-    love.graphics.rectangle("fill", hitbox_x, hitbox_y, hitbox_width, hitbox_height)
-    love.graphics.setColor(1, 1, 1, 1)
-end
-
 function gun.isClicked(mx, my)
     if not sprite then return false end  -- Don't process clicks if no sprite is set
 
-    -- Calculate actual hitbox dimensions
-    local hitbox_width = gun_width * BASE_SCALE * hitbox.width_percent
-    local hitbox_height = gun_height * BASE_SCALE * hitbox.height_percent
-    
-    -- Calculate hitbox position with offset
-    local hitbox_x = x - (hitbox_width / 2) + (gun_width * BASE_SCALE * hitbox.x_offset_percent)
-    local hitbox_y = y - (hitbox_height / 2) + (gun_height * BASE_SCALE * hitbox.y_offset_percent)
+    -- Use controller cursor position if using controller
+    local posX, posY
+    if not mx or not my then
+        if controller.usingController then
+            posX, posY = controller.cursorX, controller.cursorY
+        else
+            posX, posY = scale_manager.getMousePosition()
+        end
+    else
+        posX, posY = mx, my
+    end
 
-    -- Check if mouse is within hitbox bounds
-    return mx >= hitbox_x and mx <= hitbox_x + hitbox_width and 
-           my >= hitbox_y and my <= hitbox_y + hitbox_height
+    -- Get the gun draw position
+    local draw_x = x - (gun_width * BASE_SCALE) / 2
+    local draw_y = y - (gun_height * BASE_SCALE) / 2
+    
+    -- Calculate hitbox dimensions based on the full sprite size
+    local hitbox_width = gun_width * BASE_SCALE
+    local hitbox_height = gun_height * BASE_SCALE
+    
+    -- Add a generous margin to make clicking easier
+    local margin = 20
+
+    -- Check if mouse is within extended hitbox bounds
+    return posX >= (draw_x - margin) and posX <= (draw_x + hitbox_width + margin) and 
+           posY >= (draw_y - margin) and posY <= (draw_y + hitbox_height + margin)
 end
 
 function gun.shoot()
-    if not sprite then return false end  -- Don't shoot if no sprite is set
+    if not sprite then return false, 0 end  -- Don't shoot if no sprite is set
 
     local now = love.timer.getTime()
     if now - last_click_time < CLICK_COOLDOWN then
-        return false
+        return false, 0
     end
 
     last_click_time = now
@@ -137,13 +143,13 @@ function gun.shoot()
     -- Play the click sound with the correct volume
     local click = assets.sounds.click
     if click then
-        -- Use a copy of the sound to avoid affecting the original
-        local sound_instance = click:clone()
-        scene.applySfxVolume(sound_instance)
-        sound_instance:play()
+        scene.playSound(click)
     end
     
-    return true
+    -- Use the current power value to determine shells earned
+    local shells_earned = math.max(1, math.floor(current_power))
+    
+    return true, shells_earned
 end
 
 function gun.setSprite(newSprite)
@@ -167,6 +173,16 @@ end
 
 function gun.setPosition(newX)
     x = newX
+end
+
+-- Set the current power value (called from workbench)
+function gun.setPower(power)
+    current_power = power
+end
+
+-- Get the current power value
+function gun.getPower()
+    return current_power
 end
 
 return gun

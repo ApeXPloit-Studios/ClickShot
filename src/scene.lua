@@ -1,14 +1,16 @@
 local scene = {
     current = "menu",
     previous = nil,
-    scenes = {"menu", "game"},
+    scenes = {"menu", "game", "save_select"},
     menu_music = nil,
     game_music = nil,
     audio = {
         muted = false,
         music_volume = 0.5,
         sfx_volume = 1.0
-    }
+    },
+    save_pending = false,  -- Flag to indicate a save is needed
+    data_reload_pending = false  -- Flag to indicate data reload is needed
 }
 
 -- Centralized audio system:
@@ -64,28 +66,63 @@ end
 
 -- Load audio state from settings file
 function scene.loadAudioState()
-    -- Check if muted
-    local mute_data = love.filesystem.read("ClickShot.dat")
-    scene.audio.muted = (mute_data == "muted")
-    
-    -- Load volume settings
-    local success, user_settings = pcall(function()
-        if love.filesystem.getInfo("user_settings.lua") then
-            return love.filesystem.load("user_settings.lua")()()
+    -- Load volume and mute settings from user_settings.lua
+    if love.filesystem.getInfo("user_settings.lua") then
+        local user_settings = love.filesystem.load("user_settings.lua")()()
+        if user_settings then
+            scene.audio.music_volume = user_settings.music_volume or scene.audio.music_volume
+            scene.audio.sfx_volume = user_settings.sfx_volume or scene.audio.sfx_volume
+            
+            -- Load mute state if it exists in the settings
+            if user_settings.muted ~= nil then
+                scene.audio.muted = user_settings.muted
+            end
         end
-        return nil
-    end)
-    
-    if success and user_settings then
-        scene.audio.music_volume = user_settings.music_volume or scene.audio.music_volume
-        scene.audio.sfx_volume = user_settings.sfx_volume or scene.audio.sfx_volume
     end
 end
 
 -- Save audio state to file
 function scene.saveAudioState()
-    -- Save mute state
-    love.filesystem.write("ClickShot.dat", scene.audio.muted and "muted" or "unmuted")
+    -- Create settings string with volume and mute state
+    local settings_str = string.format(
+        [[return function() return { music_volume = %f, sfx_volume = %f, muted = %s } end]], 
+        scene.audio.music_volume, 
+        scene.audio.sfx_volume,
+        scene.audio.muted and "true" or "false"
+    )
+    
+    -- Write settings to file
+    love.filesystem.write("user_settings.lua", settings_str)
+end
+
+-- Trigger a save game operation
+function scene.triggerSaveGame()
+    scene.save_pending = true
+end
+
+-- Check if a save is pending
+function scene.isSavePending()
+    return scene.save_pending
+end
+
+-- Clear the save pending flag
+function scene.clearSavePending()
+    scene.save_pending = false
+end
+
+-- Trigger a data reload operation
+function scene.triggerDataReload()
+    scene.data_reload_pending = true
+end
+
+-- Check if a data reload is pending
+function scene.isDataReloadPending()
+    return scene.data_reload_pending
+end
+
+-- Clear the data reload pending flag
+function scene.clearDataReloadPending()
+    scene.data_reload_pending = false
 end
 
 -- Change to a different scene
@@ -139,6 +176,8 @@ function scene.updateMusic()
         
         -- Start menu music if not playing
         if scene.menu_music and not scene.menu_music:isPlaying() then
+            -- Reset the music to the beginning before playing
+            scene.menu_music:seek(0)
             scene.menu_music:play()
         end
     elseif scene.current == "game" then
@@ -149,6 +188,8 @@ function scene.updateMusic()
         
         -- Start game music if not playing
         if scene.game_music and not scene.game_music:isPlaying() then
+            -- Reset the music to the beginning before playing
+            scene.game_music:seek(0)
             scene.game_music:play()
         end
     end
@@ -161,19 +202,21 @@ end
 function scene.setMusicVolume(volume)
     scene.audio.music_volume = volume
     scene.applyAudioState()
+    scene.saveAudioState()
 end
 
 -- Set sound effects volume
 function scene.setSfxVolume(volume)
     scene.audio.sfx_volume = volume
     scene.applyAudioState()
+    scene.saveAudioState()
 end
 
 -- Toggle mute state
 function scene.toggleMute()
     scene.audio.muted = not scene.audio.muted
-    scene.saveAudioState()
     scene.applyAudioState()
+    scene.saveAudioState()
 end
 
 -- Function to check if audio is muted
@@ -204,14 +247,15 @@ function scene.applySfxVolume(sound)
     return sound
 end
 
--- Legacy function for backward compatibility
-function scene.setVolume(volume)
-    scene.setMusicVolume(volume)
-end
-
--- Legacy function for backward compatibility  
-function scene.applyMuteState()
-    scene.applyAudioState()
+-- Play a sound effect with proper volume
+function scene.playSound(sound)
+    if not sound then return end
+    
+    local sound_instance = sound:clone()
+    scene.applySfxVolume(sound_instance)
+    sound_instance:play()
+    
+    return sound_instance
 end
 
 return scene
