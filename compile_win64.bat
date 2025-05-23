@@ -83,6 +83,11 @@ echo Copying files to Windows directory...
 copy "%BUILD_DIR%\%GAME_NAME%.exe" "%DIST_DIR%\" /Y >nul
 xcopy "%BUILD_DIR%\love-%LOVE_VERSION%-win64\*.dll" "%DIST_DIR%\" /Y >nul
 
+:: Copy Steam API files
+echo Copying Steam API files...
+copy "%ROOT_DIR%steam_api64.dll" "%DIST_DIR%\" /Y >nul
+copy "%ROOT_DIR%luasteam.dll" "%DIST_DIR%\" /Y >nul
+
 :: Copy license
 echo Copying license...
 copy "%ROOT_DIR%LICENSE.txt" "%DIST_DIR%\" /Y >nul 2>&1
