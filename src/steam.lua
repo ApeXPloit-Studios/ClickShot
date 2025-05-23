@@ -5,11 +5,11 @@ local initialized = false
 
 -- Centralized achievement IDs
 steam.achievements = {
-    FIRST_SHOT = "ACH_WIN_ONE_GAME", -- These IDs need to be changed when the game is released (for now only using the test game 480)
-    FIRST_UPGRADE = "ACH_WIN_100_GAMES",
-    FIRST_WEAPON = "ACH_TRAVEL_FAR_ACCUM",
-    FIRST_ATTACHMENT = "NEW_ACHIEVEMENT_0_4",
-    TEN_THOUSAND_SHELLS = "ACH_TRAVEL_FAR_SINGLE"
+    FIRST_SHOT = "ACH_FIRST_SHOT", -- These IDs need to be changed when the game is released (for now only using the test game 480)
+    FIRST_UPGRADE = "ACH_FIRST_UPGRADE",
+    FIRST_WEAPON = "ACH_FIRST_WEAPON",
+    FIRST_ATTACHMENT = "ACH_FIRST_ATTACHMENT",
+    TEN_THOUSAND_SHELLS = "ACH_TEN_THOUSAND_SHELLS"
 }
 
 function steam.init()

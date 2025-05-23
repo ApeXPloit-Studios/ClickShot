@@ -18,7 +18,7 @@ local main_menu = {
         size = 48,  -- Size of the Discord button
         hover = false
     },
-    version = "1.1.0-alpha"  -- Current version
+    version = "1.0.0"  -- Current version
 }
 
 local buttons = {

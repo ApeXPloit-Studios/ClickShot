@@ -18,23 +18,9 @@ A simple clicker game built with LÖVE2D where you earn shells by clicking and u
 - **Q Key:** Toggle the workbench.
 - **Escape Key:** Pause the game.
 
-## Installation
-
-1. **Download LÖVE2D:**
-   - Visit [love2d.org](https://love2d.org/) and download the latest version for your operating system.
-
-2. **Download ClickShot:**
-   - Clone or download this repository.
-
-3. **Run the Game:**
-   - Drag the `ClickShot` folder onto the LÖVE2D executable, or run it from the command line:
-     ```bash
-     love /path/to/ClickShot
-     ```
-
 ## Development
 
-- **Dependencies:** LÖVE2D 11.4 or higher.
+- **Dependencies:** LÖVE2D 11.4 or higher, Steamworks API SDK, LuaSteam. Place _steam_api64.dll_ and _luasteam.dll_ in project folder.
 - **Building:** Use the provided build scripts (`compile_win64.bat` for Windows, `compile_macos.sh` for macOS) to create standalone executables.
 
 ## License

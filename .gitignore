@@ -3,4 +3,5 @@
 /dist/
 
 # encryption keys
-keytoken.lua
+luasteam.dll
+steam_api64.dll
