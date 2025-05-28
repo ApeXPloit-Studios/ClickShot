@@ -262,6 +262,19 @@ function workbench.mousepressed(mx, my, button, game)
                     workbench.scroll_offset = 0
                     workbench.updateGunSprite()
                     save.update(game.shells, weapons.getAll(), workbench.equipped, workbench.equipped_weapon)
+                    
+                    -- Set first weapon achievement if this is the first equip
+                    steam.setAchievement(steam.achievements.FIRST_WEAPON)
+                    
+                    -- Set weapon-specific achievement
+                    local achievement_map = {
+                        ak47 = steam.achievements.AK47_EQUIPPED,
+                        smg = steam.achievements.SMG_EQUIPPED,
+                        bazooka = steam.achievements.BAZOOKA_EQUIPPED
+                    }
+                    if achievement_map[weapon] then
+                        steam.setAchievement(achievement_map[weapon])
+                    end
                 end
                 return
             end
@@ -279,8 +292,16 @@ function workbench.mousepressed(mx, my, button, game)
                         workbench.equipped[workbench.expanded_weapon][type] = not was_equipped
                         workbench.updateGunSprite()
                         save.update(game.shells, weapons.getAll(), workbench.equipped, workbench.equipped_weapon)
-                        if not was_equipped then
+                        
+                        if not was_equipped then  -- Only when equipping, not unequipping
+                            -- Set first attachment achievement
                             steam.setAchievement(steam.achievements.FIRST_ATTACHMENT)
+                            
+                            -- Set attachment-specific achievement
+                            local achievement_key = string.upper(workbench.expanded_weapon .. "_" .. type .. "_EQUIPPED")
+                            if steam.achievements[achievement_key] then
+                                steam.setAchievement(steam.achievements[achievement_key])
+                            end
                         end
                     end
                     return
