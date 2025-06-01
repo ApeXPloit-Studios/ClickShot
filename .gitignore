@@ -5,3 +5,6 @@
 # encryption keys
 luasteam.dll
 steam_api64.dll
+
+# platform specific junk
+*.DS_Store
