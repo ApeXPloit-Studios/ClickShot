@@ -88,3 +88,31 @@ jobs:
         with:
           name: clickshot-android
           path: dist\ClickShot-android.zip
+
+  build-nintendo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Build 3DS Version
+        run: |
+          .\compile_nintendo.bat 3ds
+      - name: Build Switch Version
+        run: |
+          .\compile_nintendo.bat switch
+      - name: Build WiiU Version
+        run: |
+          .\compile_nintendo.bat wiiu
+
+      - name: Zip Nintendo Builds
+        run: |
+          cd dist/Nintendo
+          powershell Compress-Archive -Path * -DestinationPath ../ClickShot-nintendo.zip
+
+      - name: Upload Nintendo Builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickshot-nintendo
+          path: dist/ClickShot-nintendo.zip
