@@ -10,6 +10,7 @@ steam.achievements = {
     FIRST_WEAPON = "ACH_FIRST_WEAPON",
     FIRST_ATTACHMENT = "ACH_FIRST_ATTACHMENT",
     TEN_THOUSAND_SHELLS = "ACH_TEN_THOUSAND_SHELLS",
+    KEVIN_ALLEN = "ACH_KEVIN_ALLEN",  -- Konami code achievement
     
     -- Weapon-specific achievements (excluding pistol since it's the starting weapon)
     AK47_EQUIPPED = "ACH_AK47_EQUIPPED",

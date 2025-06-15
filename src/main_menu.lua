@@ -6,6 +6,7 @@ local ui = require("ui")
 local scale_manager = require("scale_manager")
 local save_slot_menu = require("save_slot_menu")
 local controller = require("controller")
+local steam = require("steam")
 
 local main_menu = {
     time = 0,
@@ -18,7 +19,14 @@ local main_menu = {
         size = 48,  -- Size of the Discord button
         hover = false
     },
-    version = "1.0.0"  -- Current version
+    version = "1.0.0",  -- Current version
+    -- Konami code tracking
+    konami_code = {
+        sequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"},
+        current_index = 1,
+        last_input_time = 0,
+        input_timeout = 2.0  -- Time in seconds before sequence resets
+    }
 }
 
 local buttons = {
@@ -263,6 +271,36 @@ function main_menu.mousereleased(x, y, button)
     -- Handle settings menu if visible
     if settings.visible then
         settings.mousereleased(x, y, button)
+    end
+end
+
+function main_menu.keypressed(key)
+    -- Check for Konami code
+    local now = love.timer.getTime()
+    
+    -- Reset sequence if too much time has passed
+    if now - main_menu.konami_code.last_input_time > main_menu.konami_code.input_timeout then
+        main_menu.konami_code.current_index = 1
+    end
+    
+    -- Update last input time
+    main_menu.konami_code.last_input_time = now
+    
+    -- Check if the current key matches the next in sequence
+    local expected_key = main_menu.konami_code.sequence[main_menu.konami_code.current_index]
+    if key == expected_key then
+        main_menu.konami_code.current_index = main_menu.konami_code.current_index + 1
+        
+        -- If we've completed the sequence
+        if main_menu.konami_code.current_index > #main_menu.konami_code.sequence then
+            -- Award the achievement
+            steam.setAchievement("ACH_KEVIN_ALLEN")
+            -- Reset the sequence
+            main_menu.konami_code.current_index = 1
+        end
+    else
+        -- Reset sequence if wrong key
+        main_menu.konami_code.current_index = 1
     end
 end
 
